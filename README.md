@@ -1,36 +1,45 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Property Management Tool
 
-## Getting Started
+## COMPANY PURPOSE
+To design a tool that helps landlords simplify management of their properties.
 
-First, run the development server:
+## PROBLEM
+Ugandans, who diversify Into real estate face significant challenges in management of their real estate portfolio since they run the business as a gig.
+They therefore can't dedicate full time commitment to the properties yet they need to generate significant returns.
+One of the major issues is in keeping track of payments with the different tenants and issuing receipts.
+Companies which offer solutions currently focus on building costly tools,with lots of Features that barely address the problems of the consumer.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## SOLUTION
+Our solution is to build a tool, that keeps tracks of all payments on the landlords end.
+The display page will show the landlord how much money he's demanding a certain tenant.
+It will also show totals of rent that have been collected per month, rent occupancy & vacancy.
+The landlord will also be able to have payment history of the tenant.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The tool will be cheap, a one-off negotiable 500,000 payment followed by a 100,000 annual payment.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## TECH STACK
+*   **FRAMEWORK** - a react next.js project
+*   **CSS** - TAILWIND but i will use shadcn/ui
+*   **Receipt generation** -- using HTML2PDF tool https://github.com/eKoopmans/html2pdf.js
+*   **Frontend Hosting** - Vercel
+*   **Database** - Firebase Firestore
+*   **Auth** - Firebase Auth
+*   **Storage** - Firebase Storage
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## HOW THE APP WILL WORK?
+Landlord
+Dashboard: where they can add and view all their properties, track payments, print receipts
 
-## Learn More
+## WHY NOW?
+The market for property management services exists and is largely untapped, there is no company that has a monopoly on the business in the residential market, This is an ideal time to solidify our position.
 
-To learn more about Next.js, take a look at the following resources:
+## MARKET POTENTIAL
+Our customers are landlords in Uganda, we shall initially cater for the residential real estate space before developing solutions for the commercial real estate sector
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## COMPETITION /ALTERNATIVES
+All our competitors,with similar tools, don't even have more than 20 active customers.
+Competitors include ; True Soil, Credo Mgt, Alinda, RentalLyk.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## BUSINESS MODEL
+We shall run a low-cost, subscription model.
+Clients pay a one-off followed by a regular yearly payment.
