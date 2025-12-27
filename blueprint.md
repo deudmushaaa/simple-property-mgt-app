@@ -8,7 +8,7 @@ A tool designed to help landlords in Uganda simplify the management of their pro
 
 ### Style and Design
 *   **Framework:** Next.js with React
-*   **Styling:** Tailwind CSS with shadcn/ui components.
+*   **Styling:** Tailwind CSS with shadcn/ui components (slate theme).
 *   **Visual Design:** Modern, clean, and intuitive user interface. Mobile responsive. Will use modern iconography, typography, and a vibrant color palette.
 
 ### Features
@@ -24,8 +24,8 @@ A tool designed to help landlords in Uganda simplify the management of their pro
 *   **Storage:** Firebase Storage for any file uploads (e.g., lease agreements).
 *   **Receipt Generation:** Using html2pdf.js to generate PDF receipts from HTML.
 
-## Current Plan: Project Setup
+## Current Plan: Build out the Properties Page
 
-*   Create a comprehensive `README.md` file for the project.
-*   Create a `.gitignore` file tailored for a Next.js project.
-*   Configure the Firebase environment by updating `.idx/mcp.json`.
+*   **Add shadcn/ui components:** Add `Table`, `Button`, `Card`, `Dialog`, `Input`, and `Label` components to the project.
+*   **Build Properties Page UI:** Create a table to display a list of properties with placeholder data. Add an "Add Property" button that will open a dialog to add a new property.
+*   **Create Add Property Dialog:** Design the form within the dialog to capture details for a new property, such as property name, location, and rent amount.
