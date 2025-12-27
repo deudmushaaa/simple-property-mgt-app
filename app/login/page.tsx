@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import Link from 'next/link';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -59,6 +60,12 @@ export default function LoginPage() {
             {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
             <Button className="w-full mt-4" type="submit">Login</Button>
           </form>
+          <div className="mt-4 text-center text-sm">
+            Don't have an account?{" "}
+            <Link href="/signup" className="underline">
+              Sign Up
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>
