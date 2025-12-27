@@ -1,8 +1,9 @@
-"use client";
+'use client';
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { DollarSign, Users, Building } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import withAuth from '@/components/auth/withAuth';
 
 const data = [
   { name: 'Jan', rent: 4000 },
@@ -13,7 +14,7 @@ const data = [
   { name: 'Jun', rent: 5500 },
 ];
 
-export default function Dashboard() {
+function Dashboard() {
   return (
     <main className="flex-1 bg-gray-100 dark:bg-gray-800 p-6">
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -69,3 +70,5 @@ export default function Dashboard() {
     </main>
   );
 }
+
+export default withAuth(Dashboard);

@@ -9,9 +9,8 @@ import { Button } from "@/components/ui/button";
 
 const links = [
   { href: "/", icon: Home, label: "Dashboard" },
-  { href: "/properties", icon: Building, label: "Properties" },
-  { href: "/tenants", icon: Users, label: "Tenants" },
-  { href: "/payments", icon: CreditCard, label: "Payments" },
+  { href: "/landlords", icon: Users, label: "Landlords" },
+  { href: "/buildings", icon: Building, label: "Buildings" },
 ];
 
 export function Nav() {
@@ -54,7 +53,8 @@ export function Nav() {
               pathname === href
                 ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-50"
                 : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-            }`}>
+            }`}
+          >
             <Icon className="h-4 w-4" />
             {label}
           </Link>

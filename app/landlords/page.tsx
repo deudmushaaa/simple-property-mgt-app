@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Pencil, Trash2 } from 'lucide-react';
 import {
@@ -24,153 +24,91 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import withAuth from '@/components/auth/withAuth';
 
-function TenantsPage() {
-  const [tenants, setTenants] = useState([]);
-  const [units, setUnits] = useState([]);
+function LandlordsPage() {
+  const [landlords, setLandlords] = useState([]);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [unitId, setUnitId] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [editIsOpen, setEditIsOpen] = useState(false);
-  const [selectedTenant, setSelectedTenant] = useState(null);
+  const [selectedLandlord, setSelectedLandlord] = useState(null);
 
-  const fetchTenants = async () => {
-    const querySnapshot = await getDocs(collection(db, 'tenants'));
-    const tenantsData = await Promise.all(querySnapshot.docs.map(async (doc) => {
-      const tenant = { id: doc.id, ...doc.data() };
-      if (tenant.unitId) {
-        const unitDoc = await getDoc(doc(db, 'units', tenant.unitId));
-        if (unitDoc.exists()) {
-          tenant.unitNumber = unitDoc.data().unitNumber;
-        }
-      }
-      return tenant;
-    }));
-    setTenants(tenantsData);
-  };
-
-  const fetchUnits = async () => {
-    const querySnapshot = await getDocs(collection(db, 'units'));
-    const unitsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    setUnits(unitsData);
+  const fetchLandlords = async () => {
+    const querySnapshot = await getDocs(collection(db, 'landlords'));
+    const landlordsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    setLandlords(landlordsData);
   };
 
   useEffect(() => {
-    fetchTenants();
-    fetchUnits();
+    fetchLandlords();
   }, []);
 
-  const handleAddTenant = async () => {
+  const handleAddLandlord = async () => {
     if (name && email) {
-      const tenantRef = await addDoc(collection(db, 'tenants'), {
+      await addDoc(collection(db, 'landlords'), {
         name,
         email,
         phoneNumber,
       });
-
-      if (unitId) {
-        const unitRef = doc(db, 'units', unitId);
-        await updateDoc(unitRef, {
-          tenantId: tenantRef.id,
-        });
-      }
-
       setName('');
       setEmail('');
       setPhoneNumber('');
-      setUnitId('');
       setIsOpen(false);
-      fetchTenants();
+      fetchLandlords();
     }
   };
 
-  const handleEdit = (tenant) => {
-    setSelectedTenant(tenant);
-    setName(tenant.name);
-    setEmail(tenant.email);
-    setPhoneNumber(tenant.phoneNumber);
-    setUnitId(tenant.unitId);
+  const handleEdit = (landlord) => {
+    setSelectedLandlord(landlord);
+    setName(landlord.name);
+    setEmail(landlord.email);
+    setPhoneNumber(landlord.phoneNumber);
     setEditIsOpen(true);
   };
 
   const handleUpdate = async () => {
-    if (selectedTenant) {
-      const tenantRef = doc(db, 'tenants', selectedTenant.id);
-      await updateDoc(tenantRef, {
+    if (selectedLandlord) {
+      const landlordRef = doc(db, 'landlords', selectedLandlord.id);
+      await updateDoc(landlordRef, {
         name,
         email,
         phoneNumber,
       });
-
-      if (unitId && unitId !== selectedTenant.unitId) {
-        // If unit is changed, update the new unit
-        const newUnitRef = doc(db, 'units', unitId);
-        await updateDoc(newUnitRef, {
-          tenantId: selectedTenant.id,
-        });
-        // and remove tenant from old unit
-        if (selectedTenant.unitId) {
-          const oldUnitRef = doc(db, 'units', selectedTenant.unitId);
-          await updateDoc(oldUnitRef, {
-            tenantId: null,
-          });
-        }
-      }
-
-      setSelectedTenant(null);
+      setSelectedLandlord(null);
       setName('');
       setEmail('');
       setPhoneNumber('');
-      setUnitId('');
       setEditIsOpen(false);
-      fetchTenants();
+      fetchLandlords();
     }
   };
 
-  const handleDelete = async (tenantId) => {
-    // Before deleting a tenant, we need to remove the tenantId from the assigned unit
-    const tenant = tenants.find(t => t.id === tenantId);
-    if (tenant && tenant.unitId) {
-        const unitRef = doc(db, 'units', tenant.unitId);
-        await updateDoc(unitRef, {
-            tenantId: null,
-        });
-    }
-
-    await deleteDoc(doc(db, 'tenants', tenantId));
-    fetchTenants();
+  const handleDelete = async (landlordId) => {
+    await deleteDoc(doc(db, 'landlords', landlordId));
+    fetchLandlords();
   };
 
   return (
     <div className="container mx-auto py-10">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Tenants</h1>
+        <h1 className="text-2xl font-bold">Landlords</h1>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button onClick={() => {
               setName('');
               setEmail('');
               setPhoneNumber('');
-              setUnitId('');
             }}>
-              <PlusCircle className="mr-2 h-4 w-4" /> Add Tenant
+              <PlusCircle className="mr-2 h-4 w-4" /> Add Landlord
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Add New Tenant</DialogTitle>
+              <DialogTitle>Add New Landlord</DialogTitle>
               <DialogDescription>
-                Enter the details of the new tenant.
+                Enter the details of the new landlord.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -207,27 +145,10 @@ function TenantsPage() {
                   className="col-span-3"
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="unit" className="text-right">
-                  Unit
-                </Label>
-                <Select onValueChange={setUnitId} value={unitId}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select a unit" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {units.map(unit => (
-                      <SelectItem key={unit.id} value={unit.id}>
-                        {unit.unitNumber}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
             <DialogFooter>
-              <Button type="submit" onClick={handleAddTenant}>
-                Add Tenant
+              <Button type="submit" onClick={handleAddLandlord}>
+                Add Landlord
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -238,24 +159,22 @@ function TenantsPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
+              <TableHead>Email</_TableHead>
               <TableHead>Phone Number</TableHead>
-              <TableHead>Unit</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {tenants.map(tenant => (
-              <TableRow key={tenant.id}>
-                <TableCell>{tenant.name}</TableCell>
-                <TableCell>{tenant.email}</TableCell>
-                <TableCell>{tenant.phoneNumber}</TableCell>
-                <TableCell>{tenant.unitNumber}</TableCell>
+            {landlords.map(landlord => (
+              <TableRow key={landlord.id}>
+                <TableCell>{landlord.name}</TableCell>
+                <TableCell>{landlord.email}</TableCell>
+                <TableCell>{landlord.phoneNumber}</TableCell>
                 <TableCell>
-                  <Button variant="ghost" size="icon" onClick={() => handleEdit(tenant)}>
+                  <Button variant="ghost" size="icon" onClick={() => handleEdit(landlord)}>
                     <Pencil className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleDelete(tenant.id)}>
+                  <Button variant="ghost" size="icon" onClick={() => handleDelete(landlord.id)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </TableCell>
@@ -268,9 +187,9 @@ function TenantsPage() {
       <Dialog open={editIsOpen} onOpenChange={setEditIsOpen}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Edit Tenant</DialogTitle>
+              <DialogTitle>Edit Landlord</DialogTitle>
               <DialogDescription>
-                Update the details of the tenant.
+                Update the details of the landlord.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -307,23 +226,6 @@ function TenantsPage() {
                   className="col-span-3"
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="unit-edit" className="text-right">
-                  Unit
-                </Label>
-                <Select onValueChange={setUnitId} value={unitId}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select a unit" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {units.map(unit => (
-                      <SelectItem key={unit.id} value={unit.id}>
-                        {unit.unitNumber}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
             <DialogFooter>
               <Button type="submit" onClick={handleUpdate}>
@@ -336,4 +238,4 @@ function TenantsPage() {
   );
 }
 
-export default withAuth(TenantsPage);
+export default withAuth(LandlordsPage);
