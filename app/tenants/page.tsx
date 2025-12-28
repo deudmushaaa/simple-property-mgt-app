@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Pencil, Trash2 } from 'lucide-react';
 import {
@@ -24,71 +24,39 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import withAuth from '@/components/auth/withAuth';
 
 function TenantsPage() {
   const [tenants, setTenants] = useState([]);
-  const [units, setUnits] = useState([]);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [unitId, setUnitId] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [editIsOpen, setEditIsOpen] = useState(false);
   const [selectedTenant, setSelectedTenant] = useState(null);
 
   const fetchTenants = async () => {
     const querySnapshot = await getDocs(collection(db, 'tenants'));
-    const tenantsData = await Promise.all(querySnapshot.docs.map(async (doc) => {
-      const tenant = { id: doc.id, ...doc.data() };
-      if (tenant.unitId) {
-        const unitDoc = await getDoc(doc(db, 'units', tenant.unitId));
-        if (unitDoc.exists()) {
-          tenant.unitNumber = unitDoc.data().unitNumber;
-        }
-      }
-      return tenant;
-    }));
+    const tenantsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     setTenants(tenantsData);
   };
 
-  const fetchUnits = async () => {
-    const querySnapshot = await getDocs(collection(db, 'units'));
-    const unitsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    setUnits(unitsData);
-  };
-
   useEffect(() => {
-    fetchTenants();
-    fetchUnits();
+    (async () => {
+        await fetchTenants();
+    })();
   }, []);
 
   const handleAddTenant = async () => {
     if (name && email) {
-      const tenantRef = await addDoc(collection(db, 'tenants'), {
+      await addDoc(collection(db, 'tenants'), {
         name,
         email,
         phoneNumber,
       });
-
-      if (unitId) {
-        const unitRef = doc(db, 'units', unitId);
-        await updateDoc(unitRef, {
-          tenantId: tenantRef.id,
-        });
-      }
-
       setName('');
       setEmail('');
       setPhoneNumber('');
-      setUnitId('');
       setIsOpen(false);
       fetchTenants();
     }
@@ -99,7 +67,6 @@ function TenantsPage() {
     setName(tenant.name);
     setEmail(tenant.email);
     setPhoneNumber(tenant.phoneNumber);
-    setUnitId(tenant.unitId);
     setEditIsOpen(true);
   };
 
@@ -111,42 +78,16 @@ function TenantsPage() {
         email,
         phoneNumber,
       });
-
-      if (unitId && unitId !== selectedTenant.unitId) {
-        // If unit is changed, update the new unit
-        const newUnitRef = doc(db, 'units', unitId);
-        await updateDoc(newUnitRef, {
-          tenantId: selectedTenant.id,
-        });
-        // and remove tenant from old unit
-        if (selectedTenant.unitId) {
-          const oldUnitRef = doc(db, 'units', selectedTenant.unitId);
-          await updateDoc(oldUnitRef, {
-            tenantId: null,
-          });
-        }
-      }
-
       setSelectedTenant(null);
       setName('');
       setEmail('');
       setPhoneNumber('');
-      setUnitId('');
       setEditIsOpen(false);
       fetchTenants();
     }
   };
 
   const handleDelete = async (tenantId) => {
-    // Before deleting a tenant, we need to remove the tenantId from the assigned unit
-    const tenant = tenants.find(t => t.id === tenantId);
-    if (tenant && tenant.unitId) {
-        const unitRef = doc(db, 'units', tenant.unitId);
-        await updateDoc(unitRef, {
-            tenantId: null,
-        });
-    }
-
     await deleteDoc(doc(db, 'tenants', tenantId));
     fetchTenants();
   };
@@ -161,7 +102,6 @@ function TenantsPage() {
               setName('');
               setEmail('');
               setPhoneNumber('');
-              setUnitId('');
             }}>
               <PlusCircle className="mr-2 h-4 w-4" /> Add Tenant
             </Button>
@@ -207,23 +147,6 @@ function TenantsPage() {
                   className="col-span-3"
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="unit" className="text-right">
-                  Unit
-                </Label>
-                <Select onValueChange={setUnitId} value={unitId}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select a unit" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {units.map(unit => (
-                      <SelectItem key={unit.id} value={unit.id}>
-                        {unit.unitNumber}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
             <DialogFooter>
               <Button type="submit" onClick={handleAddTenant}>
@@ -240,7 +163,6 @@ function TenantsPage() {
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Phone Number</TableHead>
-              <TableHead>Unit</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -250,7 +172,6 @@ function TenantsPage() {
                 <TableCell>{tenant.name}</TableCell>
                 <TableCell>{tenant.email}</TableCell>
                 <TableCell>{tenant.phoneNumber}</TableCell>
-                <TableCell>{tenant.unitNumber}</TableCell>
                 <TableCell>
                   <Button variant="ghost" size="icon" onClick={() => handleEdit(tenant)}>
                     <Pencil className="h-4 w-4" />
@@ -306,23 +227,6 @@ function TenantsPage() {
                   onChange={e => setPhoneNumber(e.target.value)}
                   className="col-span-3"
                 />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="unit-edit" className="text-right">
-                  Unit
-                </Label>
-                <Select onValueChange={setUnitId} value={unitId}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select a unit" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {units.map(unit => (
-                      <SelectItem key={unit.id} value={unit.id}>
-                        {unit.unitNumber}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
             </div>
             <DialogFooter>

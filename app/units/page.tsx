@@ -1,11 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Pencil, Trash2, Eye } from 'lucide-react';
+import { PlusCircle, Pencil, Trash2 } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -25,20 +24,12 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import withAuth from '@/components/auth/withAuth';
 
 function UnitsPage() {
   const [units, setUnits] = useState([]);
-  const [buildings, setBuildings] = useState([]);
-  const [unitNumber, setUnitNumber] = useState('');
-  const [buildingId, setBuildingId] = useState('');
+  const [name, setName] = useState('');
+  const [address, setAddress] = useState('');
   const [rent, setRent] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [editIsOpen, setEditIsOpen] = useState(false);
@@ -46,39 +37,25 @@ function UnitsPage() {
 
   const fetchUnits = async () => {
     const querySnapshot = await getDocs(collection(db, 'units'));
-    const unitsData = await Promise.all(querySnapshot.docs.map(async (doc) => {
-      const unit = { id: doc.id, ...doc.data() };
-      if (unit.buildingId) {
-        const buildingDoc = await getDoc(doc(db, 'buildings', unit.buildingId));
-        if (buildingDoc.exists()) {
-          unit.buildingName = buildingDoc.data().name;
-        }
-      }
-      return unit;
-    }));
+    const unitsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     setUnits(unitsData);
   };
 
-  const fetchBuildings = async () => {
-    const querySnapshot = await getDocs(collection(db, 'buildings'));
-    const buildingsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    setBuildings(buildingsData);
-  };
-
   useEffect(() => {
-    fetchUnits();
-    fetchBuildings();
+    (async () => {
+        await fetchUnits();
+    })();
   }, []);
 
   const handleAddUnit = async () => {
-    if (unitNumber && buildingId && rent) {
+    if (name && address && rent) {
       await addDoc(collection(db, 'units'), {
-        unitNumber,
-        buildingId,
-        rent,
+        name,
+        address,
+        rent: Number(rent),
       });
-      setUnitNumber('');
-      setBuildingId('');
+      setName('');
+      setAddress('');
       setRent('');
       setIsOpen(false);
       fetchUnits();
@@ -87,9 +64,9 @@ function UnitsPage() {
 
   const handleEdit = (unit) => {
     setSelectedUnit(unit);
-    setUnitNumber(unit.unitNumber);
-    setBuildingId(unit.buildingId);
-    setRent(unit.rent);
+    setName(unit.name);
+    setAddress(unit.address);
+    setRent(unit.rent.toString());
     setEditIsOpen(true);
   };
 
@@ -97,13 +74,13 @@ function UnitsPage() {
     if (selectedUnit) {
       const unitRef = doc(db, 'units', selectedUnit.id);
       await updateDoc(unitRef, {
-        unitNumber,
-        buildingId,
-        rent,
+        name,
+        address,
+        rent: Number(rent),
       });
       setSelectedUnit(null);
-      setUnitNumber('');
-      setBuildingId('');
+      setName('');
+      setAddress('');
       setRent('');
       setEditIsOpen(false);
       fetchUnits();
@@ -122,8 +99,8 @@ function UnitsPage() {
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button onClick={() => {
-              setUnitNumber('');
-              setBuildingId('');
+              setName('');
+              setAddress('');
               setRent('');
             }}>
               <PlusCircle className="mr-2 h-4 w-4" /> Add Unit
@@ -138,32 +115,28 @@ function UnitsPage() {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="unitNumber" className="text-right">
-                  Unit Number
+                <Label htmlFor="name" className="text-right">
+                  Name
                 </Label>
                 <Input
-                  id="unitNumber"
-                  value={unitNumber}
-                  onChange={e => setUnitNumber(e.target.value)}
+                  id="name"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
                   className="col-span-3"
+                  placeholder="e.g., Apartment 3B"
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="building" className="text-right">
-                  Building
+                <Label htmlFor="address" className="text-right">
+                  Address
                 </Label>
-                <Select onValueChange={setBuildingId} value={buildingId}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select a building" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {buildings.map(building => (
-                      <SelectItem key={building.id} value={building.id}>
-                        {building.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input
+                  id="address"
+                  value={address}
+                  onChange={e => setAddress(e.target.value)}
+                  className="col-span-3"
+                  placeholder="e.g., Bukoto, Kampala"
+                />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="rent" className="text-right">
@@ -174,6 +147,8 @@ function UnitsPage() {
                   value={rent}
                   onChange={e => setRent(e.target.value)}
                   className="col-span-3"
+                  type="number"
+                  placeholder="e.g., 500000"
                 />
               </div>
             </div>
@@ -189,8 +164,8 @@ function UnitsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Unit Number</TableHead>
-              <TableHead>Building</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Address</TableHead>
               <TableHead>Rent</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -198,19 +173,10 @@ function UnitsPage() {
           <TableBody>
             {units.map(unit => (
               <TableRow key={unit.id}>
-                <TableCell>
-                    <Link href={`/units/${unit.id}`} className="hover:underline">
-                        {unit.unitNumber}
-                    </Link>
-                </TableCell>
-                <TableCell>{unit.buildingName}</TableCell>
+                <TableCell>{unit.name}</TableCell>
+                <TableCell>{unit.address}</TableCell>
                 <TableCell>{unit.rent}</TableCell>
                 <TableCell>
-                    <Link href={`/units/${unit.id}`}>
-                        <Button variant="ghost" size="icon">
-                            <Eye className="h-4 w-4" />
-                        </Button>
-                    </Link>
                   <Button variant="ghost" size="icon" onClick={() => handleEdit(unit)}>
                     <Pencil className="h-4 w-4" />
                   </Button>
@@ -234,32 +200,26 @@ function UnitsPage() {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="unitNumber-edit" className="text-right">
-                  Unit Number
+                <Label htmlFor="name-edit" className="text-right">
+                  Name
                 </Label>
                 <Input
-                  id="unitNumber-edit"
-                  value={unitNumber}
-                  onChange={e => setUnitNumber(e.target.value)}
+                  id="name-edit"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
                   className="col-span-3"
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="building-edit" className="text-right">
-                  Building
+                <Label htmlFor="address-edit" className="text-right">
+                  Address
                 </Label>
-                <Select onValueChange={setBuildingId} value={buildingId}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select a building" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {buildings.map(building => (
-                      <SelectItem key={building.id} value={building.id}>
-                        {building.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input
+                  id="address-edit"
+                  value={address}
+                  onChange={e => setAddress(e.target.value)}
+                  className="col-span-3"
+                />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="rent-edit" className="text-right">
@@ -270,6 +230,7 @@ function UnitsPage() {
                   value={rent}
                   onChange={e => setRent(e.target.value)}
                   className="col-span-3"
+                  type="number"
                 />
               </div>
             </div>

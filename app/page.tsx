@@ -1,74 +1,70 @@
-'use client';
+'use client'
 
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { DollarSign, Users, Building } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useEffect, useState } from 'react';
+import { db } from '@/lib/firebase';
+import { collection, getDocs } from 'firebase/firestore';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Users, Building, CreditCard } from 'lucide-react';
 import withAuth from '@/components/auth/withAuth';
 
-const data = [
-  { name: 'Jan', rent: 4000 },
-  { name: 'Feb', rent: 3000 },
-  { name: 'Mar', rent: 5000 },
-  { name: 'Apr', rent: 4500 },
-  { name: 'May', rent: 6000 },
-  { name: 'Jun', rent: 5500 },
-];
+function DashboardPage() {
+  const [tenantsCount, setTenantsCount] = useState(0);
+  const [unitsCount, setUnitsCount] = useState(0);
+  const [totalPayments, setTotalPayments] = useState(0);
 
-function Dashboard() {
+  useEffect(() => {
+    const fetchData = async () => {
+      const tenantsSnapshot = await getDocs(collection(db, 'tenants'));
+      setTenantsCount(tenantsSnapshot.size);
+
+      const unitsSnapshot = await getDocs(collection(db, 'units'));
+      setUnitsCount(unitsSnapshot.size);
+
+      const paymentsSnapshot = await getDocs(collection(db, 'payments'));
+      const total = paymentsSnapshot.docs.reduce((acc, doc) => acc + doc.data().amount, 0);
+      setTotalPayments(total);
+    };
+
+    fetchData();
+  }, []);
+
   return (
-    <main className="flex-1 bg-gray-100 dark:bg-gray-800 p-6">
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Rent Collected</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">UGX 23,000,000</div>
-            <p className="text-xs text-muted-foreground">+12% from last month</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Tenants</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">+78</div>
-            <p className="text-xs text-muted-foreground">+5 since last month</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Properties</CardTitle>
-            <Building className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">+12</div>
-            <p className="text-xs text-muted-foreground">+2 since last year</p>
-          </CardContent>
-        </Card>
-      </div>
-      <div className="mt-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Rent Collection Overview</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={data}>
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="rent" fill="#8884d8" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-    </main>
+    <div className="container mx-auto py-10">
+        <h1 className="text-3xl font-bold mb-6">Welcome to Karibu!</h1>
+        <p className="text-gray-600 dark:text-gray-400 mb-8">
+            Your simplified property management dashboard.
+        </p>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Tenants</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">{tenantsCount}</div>
+            </CardContent>
+            </Card>
+            <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Units</CardTitle>
+                <Building className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">{unitsCount}</div>
+            </CardContent>
+            </Card>
+            <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Payments</CardTitle>
+                <CreditCard className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">${totalPayments.toLocaleString()}</div>
+            </CardContent>
+            </Card>
+        </div>
+    </div>
   );
 }
 
-export default withAuth(Dashboard);
+export default withAuth(DashboardPage);

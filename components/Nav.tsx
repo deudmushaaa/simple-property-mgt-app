@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button";
 
 const links = [
   { href: "/", icon: Home, label: "Dashboard" },
-  { href: "/landlords", icon: Users, label: "Landlords" },
-  { href: "/buildings", icon: Building, label: "Buildings" },
+  { href: "/tenants", icon: Users, label: "Tenants" },
+  { href: "/units", icon: Building, label: "Units" },
+  { href: "/payments", icon: CreditCard, label: "Payments" },
 ];
 
 export function Nav() {
@@ -28,7 +29,7 @@ export function Nav() {
   if (!user) {
     return (
       <header className="flex items-center justify-between p-4 bg-white dark:bg-gray-900 border-b">
-        <h1 className="text-xl font-bold">Property Management</h1>
+        <h1 className="text-xl font-bold">Karibu</h1>
         <Button asChild>
           <Link href="/login">
             <LogIn className="mr-2 h-4 w-4" /> Login
@@ -42,7 +43,7 @@ export function Nav() {
     <header className="flex items-center justify-between p-4 bg-white dark:bg-gray-900 border-b">
        <nav className="flex items-center gap-4">
         <Link href="/" className="text-lg font-bold">
-          Property Management
+          Karibu
         </Link>
         <div className="hidden md:flex items-center gap-4">
         {links.map(({ href, icon: Icon, label }) => (
