@@ -1,243 +1,109 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { useAuth } from '@/app/AuthProvider';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Pencil, Trash2 } from 'lucide-react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import withAuth from '@/components/auth/withAuth';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
-function TenantsPage() {
+export default function TenantsPage() {
+  const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const propertyId = searchParams.get('propertyId');
+
   const [tenants, setTenants] = useState([]);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [isOpen, setIsOpen] = useState(false);
-  const [editIsOpen, setEditIsOpen] = useState(false);
-  const [selectedTenant, setSelectedTenant] = useState(null);
-
-  const fetchTenants = async () => {
-    const querySnapshot = await getDocs(collection(db, 'tenants'));
-    const tenantsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    setTenants(tenantsData);
-  };
+  const [pageTitle, setPageTitle] = useState('Tenants');
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    (async () => {
-        await fetchTenants();
-    })();
-  }, []);
+    const fetchTenants = async () => {
+      if (user) {
+        let tenantsQuery;
+        if (propertyId) {
+          tenantsQuery = query(
+            collection(db, 'tenants'),
+            where('userId', '==', user.uid),
+            where('propertyId', '==', propertyId)
+          );
+          const propertyDoc = await getDoc(doc(db, 'properties', propertyId));
+          if (propertyDoc.exists()) {
+            setPageTitle(`Tenants for ${propertyDoc.data().name}`);
+          }
+        } else {
+          tenantsQuery = query(collection(db, 'tenants'), where('userId', '==', user.uid));
+          setPageTitle('All Tenants');
+        }
 
-  const handleAddTenant = async () => {
-    if (name && email) {
-      await addDoc(collection(db, 'tenants'), {
-        name,
-        email,
-        phoneNumber,
-      });
-      setName('');
-      setEmail('');
-      setPhoneNumber('');
-      setIsOpen(false);
-      fetchTenants();
-    }
-  };
+        const tenantsSnapshot = await getDocs(tenantsQuery);
+        const tenantsData = tenantsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setTenants(tenantsData);
+      }
+    };
 
-  const handleEdit = (tenant) => {
-    setSelectedTenant(tenant);
-    setName(tenant.name);
-    setEmail(tenant.email);
-    setPhoneNumber(tenant.phoneNumber);
-    setEditIsOpen(true);
-  };
-
-  const handleUpdate = async () => {
-    if (selectedTenant) {
-      const tenantRef = doc(db, 'tenants', selectedTenant.id);
-      await updateDoc(tenantRef, {
-        name,
-        email,
-        phoneNumber,
-      });
-      setSelectedTenant(null);
-      setName('');
-      setEmail('');
-      setPhoneNumber('');
-      setEditIsOpen(false);
-      fetchTenants();
-    }
-  };
-
-  const handleDelete = async (tenantId) => {
-    await deleteDoc(doc(db, 'tenants', tenantId));
     fetchTenants();
-  };
+  }, [user, propertyId]);
+
+  const addTenantLink = propertyId ? `/tenants/add?propertyId=${propertyId}` : '/tenants/add';
+
+  const filteredTenants = tenants.filter(tenant =>
+    tenant.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="container mx-auto py-10">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Tenants</h1>
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => {
-              setName('');
-              setEmail('');
-              setPhoneNumber('');
-            }}>
-              <PlusCircle className="mr-2 h-4 w-4" /> Add Tenant
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Add New Tenant</DialogTitle>
-              <DialogDescription>
-                Enter the details of the new tenant.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">
-                  Name
-                </Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="email" className="text-right">
-                  Email
-                </Label>
-                <Input
-                  id="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="phone" className="text-right">
-                  Phone Number
-                </Label>
-                <Input
-                  id="phone"
-                  value={phoneNumber}
-                  onChange={e => setPhoneNumber(e.target.value)}
-                  className="col-span-3"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="submit" onClick={handleAddTenant}>
-                Add Tenant
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Phone Number</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {tenants.map(tenant => (
-              <TableRow key={tenant.id}>
-                <TableCell>{tenant.name}</TableCell>
-                <TableCell>{tenant.email}</TableCell>
-                <TableCell>{tenant.phoneNumber}</TableCell>
-                <TableCell>
-                  <Button variant="ghost" size="icon" onClick={() => handleEdit(tenant)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleDelete(tenant.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-
-      <Dialog open={editIsOpen} onOpenChange={setEditIsOpen}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Edit Tenant</DialogTitle>
-              <DialogDescription>
-                Update the details of the tenant.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name-edit" className="text-right">
-                  Name
-                </Label>
-                <Input
-                  id="name-edit"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="email-edit" className="text-right">
-                  Email
-                </Label>
-                <Input
-                  id="email-edit"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="phone-edit" className="text-right">
-                  Phone Number
-                </Label>
-                <Input
-                  id="phone-edit"
-                  value={phoneNumber}
-                  onChange={e => setPhoneNumber(e.target.value)}
-                  className="col-span-3"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="submit" onClick={handleUpdate}>
-                Save Changes
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>{pageTitle}</CardTitle>
+          <div className="flex items-center space-x-2">
+            <Input
+              placeholder="Search tenants..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-sm"
+            />
+            <Link href={addTenantLink}>
+              <Button>Add Tenant</Button>
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Property</TableHead>
+                  <TableHead>Unit</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredTenants.map(tenant => (
+                  <TableRow key={tenant.id}>
+                    <TableCell className="font-medium">{tenant.name}</TableCell>
+                    <TableCell>{tenant.propertyName}</TableCell>
+                    <TableCell>{tenant.unitName}</TableCell>
+                    <TableCell>{tenant.email}</TableCell>
+                    <TableCell>{tenant.phone}</TableCell>
+                    <TableCell className="text-right">
+                      <Link href={`/tenants/${tenant.id}`}>
+                        <Button variant="outline" size="sm">View</Button>
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
-
-export default withAuth(TenantsPage);

@@ -2,15 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Building, Users, CreditCard, LogOut, LogIn } from "lucide-react";
+import { Home, Building, CreditCard, LogOut, LogIn, Users } from "lucide-react";
 import { useAuth } from "@/app/AuthProvider";
 import { auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 
 const links = [
-  { href: "/", icon: Home, label: "Dashboard" },
+  { href: "/dashboard", icon: Home, label: "Dashboard" },
+  { href: "/properties", icon: Building, label: "Properties" },
   { href: "/tenants", icon: Users, label: "Tenants" },
-  { href: "/units", icon: Building, label: "Units" },
   { href: "/payments", icon: CreditCard, label: "Payments" },
 ];
 
@@ -42,7 +42,7 @@ export function Nav() {
   return (
     <header className="flex items-center justify-between p-4 bg-white dark:bg-gray-900 border-b">
        <nav className="flex items-center gap-4">
-        <Link href="/" className="text-lg font-bold">
+        <Link href="/dashboard" className="text-lg font-bold">
           Karibu
         </Link>
         <div className="hidden md:flex items-center gap-4">
