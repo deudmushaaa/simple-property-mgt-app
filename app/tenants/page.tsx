@@ -7,7 +7,7 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, getDoc, deleteDoc } from 'firebase/firestore';
 import { useAuth } from '@/app/AuthProvider';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { MoreHorizontal, Eye, Pencil, Trash2 } from 'lucide-react';
@@ -88,21 +88,59 @@ export default function TenantsPage() {
 
   return (
     <div className="container mx-auto py-10">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>{pageTitle}</CardTitle>
-          <div className="flex items-center space-x-2">
-            <Input
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">{pageTitle}</h1>
+        <div className="flex items-center space-x-2">
+           <Input
               placeholder="Search tenants..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm"
+              className="max-w-sm hidden sm:block"
             />
             <Link href={addTenantLink}>
               <Button>Add Tenant</Button>
             </Link>
-          </div>
-        </CardHeader>
+        </div>
+      </div>
+       <Input
+        placeholder="Search tenants..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className="max-w-sm sm:hidden mb-4"
+      />
+
+      {/* Mobile Card View */}
+      <div className="sm:hidden grid gap-4">
+        {filteredTenants.map(tenant => (
+          <Card key={tenant.id}>
+            <CardHeader>
+              <CardTitle className="flex justify-between items-center">
+                {tenant.name}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem asChild><Link href={`/tenants/${tenant.id}`}>View Details</Link></DropdownMenuItem>
+                    <DropdownMenuItem asChild><Link href={`/tenants/edit/${tenant.id}`}>Edit</Link></DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleDelete(tenant.id)} className="text-red-500">Delete</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">{tenant.propertyName} - Unit {tenant.unitName}</p>
+              <p className="text-sm">{tenant.email}</p>
+              <p className="text-sm">{tenant.phone}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Desktop Table View */}
+      <Card className="hidden sm:block">
         <CardContent>
           <div className="rounded-md border">
             <Table>
