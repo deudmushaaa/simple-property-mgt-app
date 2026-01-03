@@ -172,7 +172,7 @@ const ReceiptDocument = ({ payment }) => (
         </View>
         <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Remaining Balance</Text>
-            <Text>${payment.balanceAfterPayment.toLocaleString()}</Text>
+            <Text>${(payment.balanceAfterPayment ?? 0).toLocaleString()}</Text>
         </View>
         <View style={[styles.summaryRow, styles.total]}>
           <Text style={styles.totalLabel}>Total Paid</Text>

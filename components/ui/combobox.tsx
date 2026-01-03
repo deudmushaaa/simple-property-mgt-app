@@ -18,7 +18,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 
-export function Combobox({ options, value, onChange, placeholder, searchPlaceholder, emptyText }) {
+export function Combobox({ options, value, onChange, placeholder, searchPlaceholder, emptyText, ...props }) {
   const [open, setOpen] = React.useState(false)
 
   return (
@@ -29,6 +29,7 @@ export function Combobox({ options, value, onChange, placeholder, searchPlacehol
           role="combobox"
           aria-expanded={open}
           className="w-full justify-between"
+          {...props} // Pass through any other props, including data-testid
         >
           {value
             ? options.find((option) => option.value === value)?.label

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, query, where, getDocs, doc, updateDoc, increment } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, doc, updateDoc, increment, orderBy, limit, getDoc } from 'firebase/firestore';
 import { useAuth } from '@/app/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Combobox } from '@/components/ui/combobox';
 import { toast } from 'sonner';
+
+async function getNextReceiptNumber(userId) {
+  const paymentsQuery = query(
+    collection(db, 'payments'), 
+    where('userId', '==', userId), 
+    orderBy('receiptNumber', 'desc'), 
+    limit(1)
+  );
+  const snapshot = await getDocs(paymentsQuery);
+  if (snapshot.empty) {
+    return 1; // Start from 1 if no payments exist
+  }
+  const lastPayment = snapshot.docs[0].data();
+  return lastPayment.receiptNumber + 1;
+}
 
 export default function AddPaymentPage() {
   const router = useRouter();
@@ -49,8 +64,16 @@ export default function AddPaymentPage() {
 
     try {
       const paymentAmount = parseFloat(amount);
+      const receiptNumber = await getNextReceiptNumber(user.uid);
 
-      // 1. Add payment record
+      // Get the latest tenant data before calculating the new balance
+      const tenantRef = doc(db, 'tenants', selectedTenant.id);
+      const tenantSnap = await getDoc(tenantRef);
+      const currentTenantData = tenantSnap.data();
+      const currentBalance = currentTenantData.balance || 0;
+      const balanceAfterPayment = currentBalance - paymentAmount;
+      
+      // 1. Add payment record with the new balance
       await addDoc(collection(db, 'payments'), {
         userId: user.uid,
         tenantId: selectedTenant.id,
@@ -59,10 +82,11 @@ export default function AddPaymentPage() {
         type: paymentType,
         date: new Date(paymentDate),
         createdAt: new Date(),
+        receiptNumber,
+        balanceAfterPayment, // Save the calculated balance
       });
 
       // 2. Update tenant's balance
-      const tenantRef = doc(db, 'tenants', selectedTenant.id);
       await updateDoc(tenantRef, {
         balance: increment(-paymentAmount)
       });
@@ -91,6 +115,7 @@ export default function AddPaymentPage() {
             <div className="space-y-2">
                 <label htmlFor="tenant" className="font-semibold">Tenant</label>
                 <Combobox
+                    data-testid="tenant-combobox"
                     options={tenantOptions}
                     value={selectedTenant ? selectedTenant.id : ''}
                     onChange={handleTenantChange}

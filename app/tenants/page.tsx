@@ -4,12 +4,22 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, deleteDoc } from 'firebase/firestore';
 import { useAuth } from '@/app/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { MoreHorizontal, Eye, Pencil, Trash2 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { toast } from 'sonner';
 
 export default function TenantsPage() {
   const { user } = useAuth();
@@ -21,8 +31,8 @@ export default function TenantsPage() {
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    const fetchTenants = async () => {
-      if (user) {
+    if (user) {
+      const fetchTenants = async () => {
         let tenantsQuery;
         if (propertyId) {
           tenantsQuery = query(
@@ -40,13 +50,35 @@ export default function TenantsPage() {
         }
 
         const tenantsSnapshot = await getDocs(tenantsQuery);
-        const tenantsData = tenantsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const tenantsData = await Promise.all(tenantsSnapshot.docs.map(async (tenantDoc) => {
+          const tenantData = tenantDoc.data();
+          let propertyName = 'N/A';
+          if (tenantData.propertyId) {
+              const propDoc = await getDoc(doc(db, 'properties', tenantData.propertyId));
+              if (propDoc.exists()) {
+                  propertyName = propDoc.data().name;
+              }
+          }
+          return { id: tenantDoc.id, ...tenantData, propertyName };
+      }));
         setTenants(tenantsData);
-      }
-    };
-
-    fetchTenants();
+      };
+      fetchTenants();
+    }
   }, [user, propertyId]);
+
+  const handleDelete = async (tenantId) => {
+    if (!confirm('Are you sure you want to delete this tenant?')) return;
+
+    try {
+      await deleteDoc(doc(db, 'tenants', tenantId));
+      toast.success('Tenant deleted successfully!');
+      setTenants(currentTenants => currentTenants.filter(t => t.id !== tenantId));
+    } catch (error) {
+      toast.error('Failed to delete tenant. Please try again.');
+      console.error("Error deleting tenant: ", error);
+    }
+  };
 
   const addTenantLink = propertyId ? `/tenants/add?propertyId=${propertyId}` : '/tenants/add';
 
@@ -93,9 +125,34 @@ export default function TenantsPage() {
                     <TableCell>{tenant.email}</TableCell>
                     <TableCell>{tenant.phone}</TableCell>
                     <TableCell className="text-right">
-                      <Link href={`/tenants/${tenant.id}`}>
-                        <Button variant="outline" size="sm">View</Button>
-                      </Link>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <span className="sr-only">Open menu</span>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuItem asChild>
+                                    <Link href={`/tenants/${tenant.id}`}>
+                                        <Eye className="mr-2 h-4 w-4" />
+                                        View Details
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem asChild>
+                                    <Link href={`/tenants/edit/${tenant.id}`}>
+                                        <Pencil className="mr-2 h-4 w-4" />
+                                        Edit
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleDelete(tenant.id)} className="text-red-600">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}

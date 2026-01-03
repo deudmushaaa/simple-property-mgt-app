@@ -142,7 +142,7 @@ function ReceiptPage() {
               </div>
               <div className="flex justify-between py-2">
                   <span className="font-semibold text-gray-600">Remaining Balance</span>
-                  <span className={payment.balanceAfterPayment > 0 ? 'text-red-500' : 'text-green-500'}>${payment.balanceAfterPayment.toLocaleString()}</span>
+                  <span className={(payment.balanceAfterPayment ?? 0) > 0 ? 'text-red-500' : 'text-green-500'}>${(payment.balanceAfterPayment ?? 0).toLocaleString()}</span>
               </div>
               <div className="flex justify-between py-2 font-bold text-xl border-t-2 border-gray-200 mt-2 pt-2">
                   <span className="text-gray-800">Total Paid</span>

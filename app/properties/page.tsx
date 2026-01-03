@@ -1,9 +1,9 @@
-'use client'
+'use client';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, deleteDoc } from 'firebase/firestore';
 import { useAuth } from '@/app/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { PlusCircle, Eye } from 'lucide-react';
+import { PlusCircle, Eye, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { toast } from 'sonner';
+
 
 export default function PropertiesPage() {
   const { user } = useAuth();
@@ -23,17 +33,29 @@ export default function PropertiesPage() {
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    const fetchProperties = async () => {
-      if (user) {
+    if (user) {
+      const fetchProperties = async () => {
         const propertiesQuery = query(collection(db, 'properties'), where('userId', '==', user.uid));
         const querySnapshot = await getDocs(propertiesQuery);
         const propertiesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setProperties(propertiesData);
-      }
-    };
-
-    fetchProperties();
+      };
+      fetchProperties();
+    }
   }, [user]);
+
+  const handleDelete = async (propertyId) => {
+    if (!confirm('Are you sure you want to delete this property?')) return;
+
+    try {
+      await deleteDoc(doc(db, 'properties', propertyId));
+      toast.success('Property deleted successfully!');
+      setProperties(currentProperties => currentProperties.filter(p => p.id !== propertyId));
+    } catch (error) {
+      toast.error('Failed to delete property. Please try again.');
+      console.error("Error deleting property: ", error);
+    }
+  };
 
   const filteredProperties = properties.filter(property =>
     property.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -75,12 +97,34 @@ export default function PropertiesPage() {
                 <TableCell>{property.address}</TableCell>
                 <TableCell>{property.units ? property.units.length : 0}</TableCell>
                 <TableCell className="text-right">
-                    <Link href={`/tenants?propertyId=${property.id}`}>
-                        <Button variant="ghost" size="sm">
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Tenants
-                        </Button>
-                    </Link>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem asChild>
+                                <Link href={`/tenants?propertyId=${property.id}`}>
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    View Tenants
+                                </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem asChild>
+                                <Link href={`/properties/edit/${property.id}`}>
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    Edit
+                                </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDelete(property.id)} className="text-red-600">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </TableCell>
               </TableRow>
             ))}

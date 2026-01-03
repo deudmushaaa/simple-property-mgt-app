@@ -1,78 +1,73 @@
-# Karibu Property Management - Blueprint
+# Property Management App Blueprint
 
 ## Overview
 
-Karibu is a web application designed to simplify property management for landlords and property managers. It provides a centralized dashboard to track properties, tenants, payments, and key financial metrics.
+A comprehensive property management application for landlords in Uganda. It allows users to manage their properties, tenants, and payments efficiently. The application is built with Next.js and Firebase, featuring a modern, responsive, and intuitive user interface.
 
-## User Workflow
+## Project Outline & Features
 
-1.  **Add Property:** A landlord first adds a property, specifying its name, address, and the units it contains.
-2.  **View Tenants:** Clicking on a property in the properties list takes the user to a page that lists all the tenants for that specific property.
-3.  **Add Tenant:** From the tenants page, the landlord can add a new tenant to the selected property.
-4.  **Manage:** The landlord can view details about their properties and tenants, and record payments.
+### Core Architecture
+- **Framework:** Next.js (with App Router)
+- **Authentication:** Firebase Authentication
+- **Database:** Cloud Firestore
+- **Styling:** Tailwind CSS with shadcn/ui components.
+- **State Management:** React Context (for Auth) and component-level state.
+- **Deployment:** Firebase Hosting
 
-## Design & Style
+### Implemented Features
 
-*   **Framework:** Next.js with the App Router
-*   **Styling:** Tailwind CSS for a modern, responsive design
-*   **Component Library:** shadcn/ui for high-quality, reusable UI components
-*   **Icons:** Lucide icons for a clean and intuitive user experience
-*   **Hosting:** Vercel
+#### 1. User Authentication
+- **Sign-in/Sign-up:** Users can create an account and log in using email and password.
+- **Authentication State:** The application maintains and provides authentication status throughout the components using a React Context (`AuthProvider`).
+- **Protected Routes:** Pages like the dashboard, properties, and tenants are protected, redirecting unauthenticated users to the login page.
 
----
+#### 2. Dashboard (`/dashboard`)
+- **Central Hub:** Serves as the main landing page after login.
+- **At-a-glance Information:** Displays key metrics and quick-access links to major sections of the application.
+- **Responsive Design:** Adapts to various screen sizes.
 
-## Phase 1: Completed
+#### 3. Property Management (`/properties`)
+- **Property List:** Displays a table of all properties owned by the user.
+- **CRUD Operations:**
+    - **Create:** Users can add new properties with details like name and address.
+    - **Read:** View a list of all properties.
+    - **Update:** Edit existing property details.
+    - **Delete:** Remove properties from the system.
+- **Search:** Users can search for properties by name.
+- **Navigation:** Links to view tenants for a specific property.
 
-**Objective:** Refine the user flow and fix critical bugs related to adding tenants and navigation.
+#### 4. Tenant Management (`/tenants`)
+- **Tenant List:** Displays a table of all tenants. Can be filtered by property.
+- **CRUD Operations:**
+    - **Create:** Add new tenants and associate them with a property.
+    - **Read:** View a list of all tenants or tenants for a specific property.
+    - **Update:** Edit tenant details.
+    - **Delete:** Remove tenants from the system.
+- **Search:** Users can search for tenants by name.
 
-**Work Completed:**
+#### 5. Payment Management (`/payments`)
+- **Payment Records:** Displays a table of all recorded payments.
+- **CRUD Operations:**
+    - **Create:** Record new payments from tenants, specifying the amount, date, and type.
+    - **Read:** View a history of all payments.
+    - **Update:** Edit payment details.
+    - **Delete:** Remove payment records.
+- **Search:** Users can search payments by tenant or property name.
+- **Receipts:** Generate and view receipts for each payment.
 
-1.  **Fixed "Add Tenant" Flow:** The "Add Tenant" page (`/tenants/add`) has been updated to handle cases where it is accessed directly, without URL parameters. It now allows users to select a property and unit from dropdown menus.
-2.  **Streamlined Navigation:** The main navigation has been updated to provide a more property-centric user flow. The "Tenants" link has been removed, and a "Payments" link has been added.
-3.  **Added Tenants Page:** A new page has been created at `/tenants` to display a list of all tenants.
-4.  **Added Tenant Details Page:** A new page has been created at `/tenants/[id]` to display the details of a specific tenant.
+#### 6. UI & Navigation
+- **Main Navigation:** A persistent side navigation bar (`Nav.tsx`) provides easy access to all main pages (Dashboard, Properties, Tenants, Payments, Settings).
+- **Header & Breadcrumbs:** A dynamic header (`Header.tsx`) displays the title of the current page and provides breadcrumb navigation to show the user's current location within the app hierarchy. The breadcrumbs are built with a reusable UI component (`breadcrumb.tsx`).
+- **UI Components:** Utilizes `shadcn/ui` for a consistent and modern look and feel, including components like `Card`, `Table`, `Button`, `Input`, and `DropdownMenu`.
+- **Notifications:** Uses `sonner` to provide user-friendly toast notifications for actions like successful creation or deletion of records.
+- **Responsive Layout:** The entire application is designed to be responsive and work seamlessly on both desktop and mobile devices.
 
----
+## Current Task: Add Breadcrumb Navigation
 
-## Phase 2: Completed
+### Plan & Steps
+- **DONE:** Create a reusable `Breadcrumb` UI component in `components/ui/breadcrumb.tsx`.
+- **DONE:** Modify the `Header.tsx` component to dynamically generate and display breadcrumbs based on the current URL path.
+- **DONE:** Ensure the `Header` component is included in the main `app/layout.tsx` to display on all pages.
+- **DONE:** Correct all cascading errors introduced during the initial failed implementation.
+- **DONE:** Verify the application builds and runs without any linting or runtime errors.
 
-**Objective:** Enhance the dashboard with an "Add Tenant" shortcut and a financial overview, and implement the payments feature.
-
-**Work Completed:**
-
-1.  **Dashboard Enhancements:** The dashboard has been enhanced with an "Add Tenant" shortcut, a financial overview, and lists for recent payments and tenants with overdue balances.
-2.  **Payments Feature:** The payments feature has been implemented, with a page to view all payments and a form to record new payments.
-
----
-
-## Phase 3: Completed
-
-**Objective:** Refine the user experience by improving navigation and data entry.
-
-**Work Completed:**
-
-1.  **Corrected Tenant Navigation:** The user flow has been corrected so that clicking on a property now takes the user to a filtered list of tenants for that property. The tenants page has been updated to handle this filtering and provide a better user experience.
-2.  **Bulk Unit Creation:** The "Add New Property" page has been updated to allow for the bulk creation of units, which is much more efficient for properties with a large number of units.
-
----
-
-## Phase 4: Completed
-
-**Objective:** Fix critical bugs and prepare for deployment.
-
-**Work Completed:**
-
-1.  **Fixed Payments Page Error:** A runtime error on the payments page has been fixed. The page is now more resilient to incomplete data.
-
----
-
-## Phase 5: Search Functionality
-
-**Objective:** Add search functionality to key pages to improve usability.
-
-**Action Steps:**
-
-1.  **Properties Page:** Add a search bar to filter properties by name.
-2.  **Tenants Page:** Add a search bar to filter tenants by name.
-3.  **Payments Page:** On the "Add Payment" form, replace the tenant dropdown with a searchable combobox.
-4.  **Main Payments Page:** Add a search bar to filter payments by tenant or property name.
