@@ -4,24 +4,26 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { signUpWithEmail } from '@/lib/auth';
+import { resetPassword } from '@/lib/auth';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
-export default function SignUpPage() {
+export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [message, setMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSignUp = async () => {
+  const handlePasswordReset = async () => {
     setLoading(true);
     setError(null);
+    setMessage('');
     try {
-      await signUpWithEmail(email, password);
+      await resetPassword(email);
+      setMessage('A password reset link has been sent to your email.');
     } catch (e) {
-      console.error("Sign up failed:", e);
-      setError('Could not create account. Please try again.');
+      console.error("Password reset failed:", e);
+      setError('Could not send password reset link. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -65,9 +67,9 @@ export default function SignUpPage() {
       <div className="flex items-center justify-center py-12">
         <div className="mx-auto grid w-[350px] gap-6">
           <div className="grid gap-2 text-center">
-            <h1 className="text-3xl font-bold">Create an account</h1>
+            <h1 className="text-3xl font-bold">Forgot your password?</h1>
             <p className="text-balance text-muted-foreground">
-              Enter your email below to create your account
+              Enter your email and we&apos;ll send you a link to reset it.
             </p>
           </div>
           <div className="grid gap-4">
@@ -83,33 +85,21 @@ export default function SignUpPage() {
                 className="bg-background/80 backdrop-blur-sm"
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="bg-background/80 backdrop-blur-sm"
-              />
-            </div>
             {error && <p className="text-red-500 text-sm">{error}</p>}
+            {message && <p className="text-green-500 text-sm">{message}</p>}
             <Button
               type="submit"
               className="w-full"
-              onClick={handleSignUp}
+              onClick={handlePasswordReset}
               disabled={loading}
             >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sign Up
+              Send reset link
             </Button>
           </div>
           <div className="mt-4 text-center text-sm">
-            Already have an account?{
-              ' '}
             <Link href="/login" className="underline">
-              Sign in
+              Back to login
             </Link>
           </div>
         </div>

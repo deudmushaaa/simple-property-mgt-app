@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, DocumentData } from 'firebase/firestore';
 import { useAuth } from '@/app/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -12,11 +12,32 @@ import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 
+// Define interfaces for better type safety, based on blueprint.md
+interface Property extends DocumentData {
+  id: string;
+  name: string;
+  address: string;
+  units: { id: string; name: string }[];
+}
+
+interface Tenant extends DocumentData {
+    id: string;
+    name: string;
+    unitId: string;
+}
+
+interface UnitWithTenant {
+    id: string;
+    name: string;
+    tenant: Tenant | null;
+}
+
 export default function PropertyDetailPage() {
   const { user } = useAuth();
-  const { id } = useParams();
-  const [property, setProperty] = useState(null);
-  const [unitsWithTenants, setUnitsWithTenants] = useState([]);
+  const params = useParams();
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
+  const [property, setProperty] = useState<Property | null>(null);
+  const [unitsWithTenants, setUnitsWithTenants] = useState<UnitWithTenant[]>([]);
 
   useEffect(() => {
     const fetchPropertyData = async () => {
@@ -26,13 +47,13 @@ export default function PropertyDetailPage() {
         const propertyDocSnap = await getDoc(propertyDocRef);
 
         if (propertyDocSnap.exists()) {
-          const propertyData = { id: propertyDocSnap.id, ...propertyDocSnap.data() };
+          const propertyData = { id: propertyDocSnap.id, ...propertyDocSnap.data() } as Property;
           setProperty(propertyData);
 
           // Fetch tenants for this property
           const tenantsQuery = query(collection(db, 'tenants'), where('propertyId', '==', id));
           const tenantsSnapshot = await getDocs(tenantsQuery);
-          const tenantsMap = new Map(tenantsSnapshot.docs.map(doc => [doc.data().unitId, {id: doc.id, ...doc.data()}]));
+          const tenantsMap = new Map(tenantsSnapshot.docs.map(doc => [doc.data().unitId, {id: doc.id, ...doc.data()} as Tenant]));
 
           // Map units to tenants
           const units = propertyData.units || [];

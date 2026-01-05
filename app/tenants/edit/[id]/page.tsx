@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, getDocs, query, where, DocumentData } from 'firebase/firestore';
 import { useAuth } from '@/app/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,9 +11,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 
+// Interfaces for type safety
+interface Property extends DocumentData {
+  id: string;
+  name: string;
+  units: { name: string }[];
+}
+
+interface Unit {
+  name: string;
+}
+
 export default function EditTenantPage() {
   const router = useRouter();
-  const { id } = useParams();
+  const params = useParams();
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const { user } = useAuth();
 
   const [name, setName] = useState('');
@@ -21,8 +33,8 @@ export default function EditTenantPage() {
   const [phone, setPhone] = useState('');
   const [propertyId, setPropertyId] = useState('');
   const [unitName, setUnitName] = useState('');
-  const [properties, setProperties] = useState([]);
-  const [units, setUnits] = useState([]);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -43,7 +55,7 @@ export default function EditTenantPage() {
           // Fetch properties
           const propsQuery = query(collection(db, 'properties'), where('userId', '==', user.uid));
           const propsSnapshot = await getDocs(propsQuery);
-          const propsList = propsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          const propsList = propsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
           setProperties(propsList);
 
           // Fetch units for the initial property
@@ -77,21 +89,24 @@ export default function EditTenantPage() {
     fetchUnits();
   }, [propertyId]);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!user) {
+    if (!user || !id) {
       toast.error('You must be logged in to edit a tenant.');
       return;
     }
 
     try {
       const tenantRef = doc(db, 'tenants', id);
+      const selectedProperty = properties.find(p => p.id === propertyId);
+
       await updateDoc(tenantRef, {
         name,
         email,
         phone,
         propertyId,
         unitName,
+        propertyName: selectedProperty?.name || ''
       });
 
       toast.success('Tenant updated successfully!');

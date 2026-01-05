@@ -1,11 +1,27 @@
+'use client';
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { auth } from "@/lib/firebase";
+import { signOut } from "firebase/auth";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      router.push("/"); // Redirect to the homepage after sign-out
+    } catch (error) {
+      console.error("Error signing out: ", error);
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <header className="bg-gray-900 text-white py-4 px-6 flex items-center justify-between">
@@ -28,7 +44,7 @@ export default function DashboardLayout({
           </Link>
         </nav>
         <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleSignOut}>
             Sign Out
           </Button>
         </div>

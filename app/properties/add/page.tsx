@@ -1,15 +1,14 @@
 'use client'
 
-import { useState } from 'react';
+import { useState, FormEvent, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, writeBatch } from 'firebase/firestore';
 import { useAuth } from '@/app/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { v4 as uuidv4 } from 'uuid';
 
 export default function AddPropertyPage() {
   const router = useRouter();
@@ -20,7 +19,7 @@ export default function AddPropertyPage() {
   const [numberOfUnits, setNumberOfUnits] = useState('');
   const [unitPrefix, setUnitPrefix] = useState('Unit #');
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     if (!user) {
@@ -35,23 +34,25 @@ export default function AddPropertyPage() {
       return;
     }
 
-    // Generate units
-    const generatedUnits = [];
-    for (let i = 1; i <= numUnits; i++) {
-      generatedUnits.push({
-        id: uuidv4(),
-        name: `${unitPrefix}${i}`
-      });
-    }
-
     try {
-      await addDoc(collection(db, 'properties'), {
+      // Create the property first to get an ID
+      const propertyRef = await addDoc(collection(db, 'properties'), {
         userId: user.uid,
         name,
         address,
-        units: generatedUnits,
         createdAt: new Date(),
       });
+
+      // Now, create a batch to add all the units
+      const batch = writeBatch(db);
+      for (let i = 1; i <= numUnits; i++) {
+        addDoc(collection(db, 'units'), {
+            propertyId: propertyRef.id,
+            name: `${unitPrefix}${i}`
+        });
+      }
+      await batch.commit();
+
 
       toast.success(`${numUnits} units created for property ${name} successfully!`);
       router.push('/properties');
@@ -71,12 +72,12 @@ export default function AddPropertyPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <label htmlFor="name" className="font-semibold">Property Name</label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Downtown Apartments" required />
+              <Input id="name" value={name} onChange={(e: ChangeEvent<HTMLInputElement>) => setName(e.target.value)} placeholder="e.g., Downtown Apartments" required />
             </div>
 
             <div className="space-y-2">
               <label htmlFor="address" className="font-semibold">Address</label>
-              <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main St, Anytown, USA" required />
+              <Input id="address" value={address} onChange={(e: ChangeEvent<HTMLInputElement>) => setAddress(e.target.value)} placeholder="123 Main St, Anytown, USA" required />
             </div>
 
             <div>
@@ -84,11 +85,11 @@ export default function AddPropertyPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                       <label htmlFor="unit-prefix">Unit Name Prefix</label>
-                      <Input id="unit-prefix" value={unitPrefix} onChange={(e) => setUnitPrefix(e.target.value)} placeholder="e.g., Unit #, Apt" />
+                      <Input id="unit-prefix" value={unitPrefix} onChange={(e: ChangeEvent<HTMLInputElement>) => setUnitPrefix(e.target.value)} placeholder="e.g., Unit #, Apt" />
                   </div>
                   <div className="space-y-2">
                       <label htmlFor="number-of-units">Number of Units</label>
-                      <Input id="number-of-units" type="number" value={numberOfUnits} onChange={(e) => setNumberOfUnits(e.target.value)} placeholder="e.g., 50" required />
+                      <Input id="number-of-units" type="number" value={numberOfUnits} onChange={(e: ChangeEvent<HTMLInputElement>) => setNumberOfUnits(e.target.value)} placeholder="e.g., 50" required />
                   </div>
               </div>
             </div>

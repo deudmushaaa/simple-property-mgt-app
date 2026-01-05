@@ -2,34 +2,42 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Unit, Tenant, Property } from '@/lib/types';
 
-export default function UnitDetailsPage({ params }) {
-  const [unit, setUnit] = useState(null);
-  const [tenant, setTenant] = useState(null);
-  const [building, setBuilding] = useState(null);
+interface PageProps {
+    params: { id: string };
+}
+
+export default function UnitDetailsPage({ params }: PageProps) {
+  const [unit, setUnit] = useState<Unit | null>(null);
+  const [tenant, setTenant] = useState<Tenant | null>(null);
+  const [property, setProperty] = useState<Property | null>(null);
 
   useEffect(() => {
     if (params.id) {
       const fetchUnitDetails = async () => {
-        const unitDoc = await getDoc(doc(db, 'units', params.id));
-        if (unitDoc.exists()) {
-          const unitData = { id: unitDoc.id, ...unitDoc.data() };
+        const unitDocRef = doc(db, 'units', params.id);
+        const unitDocSnap = await getDoc(unitDocRef);
+
+        if (unitDocSnap.exists()) {
+          const unitData = { id: unitDocSnap.id, ...unitDocSnap.data() } as Unit;
           setUnit(unitData);
 
-          if (unitData.tenantId) {
-            const tenantDoc = await getDoc(doc(db, 'tenants', unitData.tenantId));
-            if (tenantDoc.exists()) {
-              setTenant({ id: tenantDoc.id, ...tenantDoc.data() });
-            }
+          // Fetch the associated property
+          const propertyDocRef = doc(db, 'properties', unitData.propertyId);
+          const propertyDocSnap = await getDoc(propertyDocRef);
+          if (propertyDocSnap.exists()) {
+            setProperty({ id: propertyDocSnap.id, ...propertyDocSnap.data() } as Property);
           }
 
-          if (unitData.buildingId) {
-            const buildingDoc = await getDoc(doc(db, 'buildings', unitData.buildingId));
-            if (buildingDoc.exists()) {
-              setBuilding({ id: buildingDoc.id, ...buildingDoc.data() });
-            }
+          // Find the tenant assigned to this unit
+          const tenantsQuery = query(collection(db, 'tenants'), where('unitId', '==', params.id));
+          const tenantsSnapshot = await getDocs(tenantsQuery);
+          if (!tenantsSnapshot.empty) {
+            const tenantDoc = tenantsSnapshot.docs[0];
+            setTenant({ id: tenantDoc.id, ...tenantDoc.data() } as Tenant);
           }
         }
       };
@@ -49,9 +57,8 @@ export default function UnitDetailsPage({ params }) {
           <CardTitle>Unit Details</CardTitle>
         </CardHeader>
         <CardContent>
-          <p><strong>Unit Number:</strong> {unit.unitNumber}</p>
-          <p><strong>Rent:</strong> {unit.rent}</p>
-          {building && <p><strong>Building:</strong> {building.name}</p>}
+          <p><strong>Unit Name:</strong> {unit.name}</p>
+          {property && <p><strong>Property:</strong> {property.name}</p>}
         </CardContent>
       </Card>
 
@@ -62,7 +69,7 @@ export default function UnitDetailsPage({ params }) {
             <CardContent className="pt-6">
               <p><strong>Name:</strong> {tenant.name}</p>
               <p><strong>Email:</strong> {tenant.email}</p>
-              <p><strong>Phone Number:</strong> {tenant.phoneNumber}</p>
+              <p><strong>Phone Number:</strong> {tenant.phone}</p>
             </CardContent>
           </Card>
         </div>

@@ -1,21 +1,44 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, orderBy, Timestamp, DocumentData } from 'firebase/firestore';
 import { useAuth } from '@/app/AuthProvider';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { toast } from 'sonner';
+
+// Interfaces for type safety
+interface Tenant extends DocumentData {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    propertyName: string;
+    unitName: string;
+    balance: number;
+}
+
+interface Payment extends DocumentData {
+    id: string;
+    date: Timestamp;
+    amount: number;
+    type: string;
+    receiptNumber: string;
+}
 
 export default function TenantDetailPage() {
   const { user } = useAuth();
-  const { id } = useParams();
-  const [tenant, setTenant] = useState(null);
-  const [payments, setPayments] = useState([]);
-  const [filteredPayments, setFilteredPayments] = useState([]);
+  const params = useParams();
+  const router = useRouter();
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
+
+  const [tenant, setTenant] = useState<Tenant | null>(null);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [filteredPayments, setFilteredPayments] = useState<Payment[]>([]);
   const [filter, setFilter] = useState('all');
 
   useEffect(() => {
@@ -24,32 +47,38 @@ export default function TenantDetailPage() {
         const tenantDocRef = doc(db, 'tenants', id);
         const tenantDocSnap = await getDoc(tenantDocRef);
 
-        if (tenantDocSnap.exists()) {
-          setTenant({ id: tenantDocSnap.id, ...tenantDocSnap.data() });
+        if (tenantDocSnap.exists() && tenantDocSnap.data().userId === user.uid) {
+          setTenant({ id: tenantDocSnap.id, ...tenantDocSnap.data() } as Tenant);
           fetchPayments(tenantDocSnap.id);
         } else {
-          // Handle tenant not found
+          toast.error("Tenant not found or you don't have access.");
+          router.push('/tenants');
         }
       }
     };
 
-    const fetchPayments = async (tenantId) => {
+    const fetchPayments = async (tenantId: string) => {
         const paymentsQuery = query(
             collection(db, 'payments'), 
             where('tenantId', '==', tenantId),
             orderBy('date', 'desc')
         );
         const snapshot = await getDocs(paymentsQuery);
-        const paymentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const paymentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment));
         setPayments(paymentsData);
         setFilteredPayments(paymentsData);
     };
 
     fetchTenantData();
-  }, [user, id]);
+  }, [user, id, router]);
 
   useEffect(() => {
     const filterPayments = () => {
+        if (filter === 'all') {
+            setFilteredPayments(payments);
+            return;
+        }
+
         const now = new Date();
         let startDate;
 
@@ -57,20 +86,19 @@ export default function TenantDetailPage() {
             startDate = new Date(now.setMonth(now.getMonth() - 6));
         } else if (filter === '1year') {
             startDate = new Date(now.setFullYear(now.getFullYear() - 1));
-        } else {
-            setFilteredPayments(payments);
-            return;
         }
 
-        const filtered = payments.filter(payment => payment.date.toDate() >= startDate);
-        setFilteredPayments(filtered);
+        if(startDate) {
+            const filtered = payments.filter(payment => payment.date.toDate() >= startDate!);
+            setFilteredPayments(filtered);
+        }
     };
 
     filterPayments();
   }, [filter, payments]);
 
   if (!tenant) {
-    return <div>Loading...</div>;
+    return <div className="container mx-auto py-10 text-center">Loading...</div>;
   }
 
   return (
@@ -92,7 +120,7 @@ export default function TenantDetailPage() {
               <h3 className="font-semibold">Lease Information</h3>
               <p><strong>Property:</strong> {tenant.propertyName}</p>
               <p><strong>Unit:</strong> {tenant.unitName}</p>
-              <p><strong>Balance:</strong> ${tenant.balance}</p>
+              <p><strong>Balance:</strong> ${tenant.balance?.toLocaleString()}</p>
             </div>
           </div>
         </CardContent>
@@ -102,9 +130,9 @@ export default function TenantDetailPage() {
           <CardHeader>
               <CardTitle>Payment History</CardTitle>
               <div className="flex space-x-2 pt-2">
-                  <Button variant={filter === 'all' ? 'solid' : 'outline'} onClick={() => setFilter('all')}>All Time</Button>
-                  <Button variant={filter === '6months' ? 'solid' : 'outline'} onClick={() => setFilter('6months')}>Last 6 Months</Button>
-                  <Button variant={filter === '1year' ? 'solid' : 'outline'} onClick={() => setFilter('1year')}>Last Year</Button>
+                  <Button variant={filter === 'all' ? 'default' : 'outline'} onClick={() => setFilter('all')}>All Time</Button>
+                  <Button variant={filter === '6months' ? 'default' : 'outline'} onClick={() => setFilter('6months')}>Last 6 Months</Button>
+                  <Button variant={filter === '1year' ? 'default' : 'outline'} onClick={() => setFilter('1year')}>Last Year</Button>
               </div>
           </CardHeader>
           <CardContent>

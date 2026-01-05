@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect } from 'react';
+import { useEffect, ComponentType } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '@/lib/firebase';
 
-const withAuth = (WrappedComponent) => {
-  const Wrapper = (props) => {
+const withAuth = <P extends object>(WrappedComponent: ComponentType<P>) => {
+  const Wrapper = (props: P) => {
     const [user, loading] = useAuthState(auth);
     const router = useRouter();
 
@@ -26,6 +26,9 @@ const withAuth = (WrappedComponent) => {
 
     return <WrappedComponent {...props} />;
   };
+
+  // Assign a display name for better debugging
+  Wrapper.displayName = `withAuth(${WrappedComponent.displayName || WrappedComponent.name || 'Component'})`;
 
   return Wrapper;
 };

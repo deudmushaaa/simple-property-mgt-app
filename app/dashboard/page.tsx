@@ -62,6 +62,30 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Overdue Tenants and Vacant Units */}
+      <div className="grid gap-6 md:grid-cols-2 mb-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Tenants with Overdue Balances</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul>
+              {/* Tenants with overdue balances will be listed here */}
+            </ul>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Vacant Units</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul>
+              {/* Vacant units will be listed here */}
+            </ul>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Quick Stats */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -95,28 +119,6 @@ export default function Dashboard() {
           <CardContent>
             <ul>
               {/* Recent payments will be listed here */}
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
-      <div className="grid gap-6 md:grid-cols-2 mt-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Tenants with Overdue Balances</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul>
-              {/* Tenants with overdue balances will be listed here */}
-            </ul>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Vacant Units</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul>
-              {/* Vacant units will be listed here */}
             </ul>
           </CardContent>
         </Card>

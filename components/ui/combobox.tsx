@@ -18,7 +18,31 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 
-export function Combobox({ options, value, onChange, placeholder, searchPlaceholder, emptyText, ...props }) {
+// Define the shape of each option in the combobox
+interface ComboboxOption {
+  value: string;
+  label: string;
+}
+
+// Define the props for the Combobox component
+interface ComboboxProps {
+  options: ComboboxOption[];
+  value?: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  searchPlaceholder?: string;
+  emptyText?: string;
+}
+
+export function Combobox({ 
+  options, 
+  value, 
+  onChange, 
+  placeholder = 'Select an option...', 
+  searchPlaceholder = 'Search...', 
+  emptyText = 'No options found.', 
+  ...props 
+}: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
 
   return (
@@ -45,9 +69,15 @@ export function Combobox({ options, value, onChange, placeholder, searchPlacehol
             {options.map((option) => (
               <CommandItem
                 key={option.value}
-                value={option.value}
+                value={option.label} // Use the label for the value
                 onSelect={(currentValue) => {
-                  onChange(currentValue === value ? '' : currentValue)
+                  if (typeof currentValue === 'string') {
+                    // Find the option that matches the selected label
+                    const selectedOption = options.find(opt => opt.label.toLowerCase() === currentValue.toLowerCase());
+                    if (selectedOption) {
+                      onChange(selectedOption.value === value ? '' : selectedOption.value)
+                    }
+                  }
                   setOpen(false)
                 }}
               >

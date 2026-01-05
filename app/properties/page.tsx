@@ -1,92 +1,88 @@
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, doc, deleteDoc } from 'firebase/firestore';
+import { useState, useEffect, FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/AuthProvider';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { PlusCircle, Eye, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Plus, Search, Edit, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-
+import { Property } from '@/lib/types';
 
 export default function PropertiesPage() {
   const { user } = useAuth();
-  const [properties, setProperties] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const router = useRouter();
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (user) {
       const fetchProperties = async () => {
         const propertiesQuery = query(collection(db, 'properties'), where('userId', '==', user.uid));
         const querySnapshot = await getDocs(propertiesQuery);
-        const propertiesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const propertiesData = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }) as Property);
         setProperties(propertiesData);
       };
       fetchProperties();
     }
   }, [user]);
 
-  const handleDelete = async (propertyId) => {
-    if (!confirm('Are you sure you want to delete this property?')) return;
+  const handleSearch = (e: FormEvent) => {
+    e.preventDefault();
+  };
 
-    try {
-      await deleteDoc(doc(db, 'properties', propertyId));
-      toast.success('Property deleted successfully!');
-      setProperties(currentProperties => currentProperties.filter(p => p.id !== propertyId));
-    } catch (error) {
-      toast.error('Failed to delete property. Please try again.');
-      console.error("Error deleting property: ", error);
+  const deleteProperty = async (propertyId: string) => {
+    if (confirm('Are you sure you want to delete this property and all associated data?')) {
+      try {
+        const tenantsQuery = query(collection(db, 'tenants'), where('propertyId', '==', propertyId));
+        const tenantsSnapshot = await getDocs(tenantsQuery);
+        const deletePromises: Promise<void>[] = [];
+        tenantsSnapshot.forEach(doc => {
+          deletePromises.push(deleteDoc(doc.ref));
+        });
+        await Promise.all(deletePromises);
+
+        await deleteDoc(doc(db, 'properties', propertyId));
+        setProperties(properties.filter(p => p.id !== propertyId));
+        toast.success('Property and all related data deleted successfully.');
+      } catch (error) {
+        console.error('Error deleting property: ', error);
+        toast.error('Failed to delete property.');
+      }
     }
   };
 
   const filteredProperties = properties.filter(property =>
-    property.name.toLowerCase().includes(searchTerm.toLowerCase())
+    property.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
     <div className="container mx-auto py-10">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Properties</h1>
-        <div className="flex items-center space-x-2">
-          <Input
-            placeholder="Search properties..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
-          />
-          <Link href="/properties/add">
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Property
-            </Button>
-          </Link>
-        </div>
+        <Button onClick={() => router.push('/properties/add')}><Plus className="mr-2 h-4 w-4" /> Add Property</Button>
       </div>
-      <div className="rounded-md border">
+
+      <form onSubmit={handleSearch} className="mb-6 flex gap-2">
+        <Input
+          type="text"
+          placeholder="Search properties..."
+          value={searchQuery}
+          onChange={(e: FormEvent<HTMLInputElement>) => setSearchQuery(e.currentTarget.value)}
+          className="max-w-sm"
+        />
+        <Button type="submit"><Search className="h-4 w-4" /></Button>
+      </form>
+
+      <div className="bg-white rounded-lg shadow-md">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Address</TableHead>
-              <TableHead>Units</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -95,36 +91,13 @@ export default function PropertiesPage() {
               <TableRow key={property.id}>
                 <TableCell className="font-medium">{property.name}</TableCell>
                 <TableCell>{property.address}</TableCell>
-                <TableCell>{property.units ? property.units.length : 0}</TableCell>
                 <TableCell className="text-right">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Open menu</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem asChild>
-                                <Link href={`/tenants?propertyId=${property.id}`}>
-                                    <Eye className="mr-2 h-4 w-4" />
-                                    View Tenants
-                                </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem asChild>
-                                <Link href={`/properties/edit/${property.id}`}>
-                                    <Pencil className="mr-2 h-4 w-4" />
-                                    Edit
-                                </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDelete(property.id)} className="text-red-600">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                  <Button variant="ghost" size="icon" onClick={() => router.push(`/properties/edit/${property.id}`)}>
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => deleteProperty(property.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}

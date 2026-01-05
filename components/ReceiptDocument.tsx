@@ -1,5 +1,6 @@
 import React from 'react';
 import { Page, Text, View, Document, StyleSheet } from '@react-pdf/renderer';
+import { Payment } from '@/lib/types';
 
 // Create styles
 const styles = StyleSheet.create({
@@ -129,7 +130,7 @@ const styles = StyleSheet.create({
   }
 });
 
-const ReceiptDocument = ({ payment }) => (
+const ReceiptDocument = ({ payment }: { payment: Payment }) => (
   <Document>
     <Page size="A4" style={styles.page}>
       <View style={styles.header}>
@@ -150,7 +151,8 @@ const ReceiptDocument = ({ payment }) => (
         </View>
         <View style={{alignItems: 'flex-end'}}>
           <Text style={styles.billedToText}>Payment Date</Text>
-          <Text>{payment.date}</Text>
+          {/* Convert Timestamp to a string before rendering */}
+          <Text>{payment.date.toDate().toLocaleDateString()}</Text>
         </View>
       </View>
 

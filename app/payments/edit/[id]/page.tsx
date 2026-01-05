@@ -12,16 +12,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { Combobox } from '@/components/ui/combobox';
 
+interface Tenant {
+    id: string;
+    name: string;
+    propertyName: string;
+    unitName: string;
+}
+
 export default function EditPaymentPage() {
   const router = useRouter();
-  const { id } = useParams();
+  const params = useParams();
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const { user } = useAuth();
 
   const [date, setDate] = useState('');
   const [amount, setAmount] = useState('');
   const [type, setType] = useState('');
   const [tenantId, setTenantId] = useState('');
-  const [tenants, setTenants] = useState([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -54,7 +62,7 @@ export default function EditPaymentPage() {
                 id: tenantDoc.id, 
                 ...tenantData,
                 propertyName
-            };
+            } as Tenant;
         }));
         setTenants(tenantsList);
         setLoading(false);
@@ -64,9 +72,9 @@ export default function EditPaymentPage() {
     fetchPaymentAndTenants();
   }, [user, id, router]);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
+    if (!user || !id) {
       toast.error('You must be logged in to edit a payment.');
       return;
     }
@@ -121,6 +129,7 @@ export default function EditPaymentPage() {
                     onChange={setTenantId}
                     placeholder="Select tenant..."
                     searchPlaceholder="Search tenants..."
+                    emptyText="No tenants found."
                 />
             </div>
             <div className="space-y-2">

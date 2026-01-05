@@ -1,126 +1,117 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, doc, getDoc, DocumentData } from 'firebase/firestore';
 import { useAuth } from '@/app/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+
+// Define interfaces for type safety
+interface Property extends DocumentData {
+  id: string;
+  name: string;
+  units: { name: string }[];
+}
+
+interface Unit {
+  name: string;
+}
 
 export default function AddTenantPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { user } = useAuth();
+  const searchParams = useSearchParams();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  
-  const [properties, setProperties] = useState([]);
-  const [units, setUnits] = useState([]);
-  const [occupiedUnitIds, setOccupiedUnitIds] = useState(new Set());
-
   const [propertyId, setPropertyId] = useState('');
-  const [unitId, setUnitId] = useState('');
   const [unitName, setUnitName] = useState('');
-  const [propertyName, setPropertyName] = useState('');
-  
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
+  const [occupiedUnits, setOccupiedUnits] = useState<string[]>([]);
   const [isFromUrl, setIsFromUrl] = useState(false);
 
-  const fetchOccupiedUnits = useCallback(async (propertyId) => {
+  const fetchOccupiedUnits = useCallback(async (propertyId: string) => {
       const tenantsQuery = query(
           collection(db, 'tenants'), 
           where('propertyId', '==', propertyId)
       );
       const tenantsSnapshot = await getDocs(tenantsQuery);
-      const occupied = new Set(tenantsSnapshot.docs.map(doc => doc.data().unitId));
-      setOccupiedUnitIds(occupied);
+      const occupied = tenantsSnapshot.docs.map(doc => doc.data().unitName);
+      setOccupiedUnits(occupied);
   }, []);
 
   useEffect(() => {
-    const pId = searchParams.get('propertyId');
-    const uId = searchParams.get('unitId');
-    const pName = searchParams.get('propertyName');
-    const uName = searchParams.get('unitName');
+    if (user) {
+      const fetchProperties = async () => {
+        const propsQuery = query(collection(db, 'properties'), where('userId', '==', user.uid));
+        const propsSnapshot = await getDocs(propsQuery);
+        const propsList = propsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
+        setProperties(propsList);
 
-    const fetchData = async () => {
-      if (pId && uId) {
-        setIsFromUrl(true);
-        setPropertyId(pId);
-        setUnitId(uId);
-        
-        // Ensure names are strings, not null or undefined
-        setPropertyName(pName || 'N/A');
-        setUnitName(uName || 'N/A');
-
-      } else if (user) {
-        const q = query(collection(db, 'properties'), where('userId', '==', user.uid));
-        const snapshot = await getDocs(q);
-        const props = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setProperties(props);
-      }
+        const propertyIdFromUrl = searchParams.get('propertyId');
+        if (propertyIdFromUrl) {
+          const propExists = propsList.some(p => p.id === propertyIdFromUrl);
+          if(propExists) {
+            setPropertyId(propertyIdFromUrl);
+            setIsFromUrl(true);
+          }
+        }
+      };
+      fetchProperties();
     }
-
-    fetchData();
   }, [user, searchParams]);
 
-  const handlePropertyChange = (selectedPropertyId) => {
-    setPropertyId(selectedPropertyId);
-    const property = properties.find(p => p.id === selectedPropertyId);
-    if (property) {
-      setPropertyName(property.name);
-      setUnits(property.units || []);
-      fetchOccupiedUnits(selectedPropertyId);
-      setUnitId('');
-      setUnitName('');
+  useEffect(() => {
+    if (propertyId) {
+      const fetchUnits = async () => {
+        const propertyDoc = await getDoc(doc(db, 'properties', propertyId));
+        if (propertyDoc.exists()) {
+          setUnits(propertyDoc.data().units || []);
+          fetchOccupiedUnits(propertyId);
+        }
+      };
+      fetchUnits();
     }
-  };
+  }, [propertyId, fetchOccupiedUnits]);
 
-  const handleUnitChange = (selectedValue) => {
-    // The selectedValue could be an ID or a name
-    const unit = (units || []).find(u => u.id === selectedValue || u.name === selectedValue);
-    if (unit) {
-        setUnitId(unit.id || unit.name); // Use ID if available, otherwise name
-        setUnitName(unit.name);
-    }
-  };
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-
     if (!user) {
       toast.error('You must be logged in to add a tenant.');
       return;
     }
 
-    if (!name || !propertyId || !unitId) {
-      toast.error('Please fill in all required fields.');
-      return;
+    if (!propertyId || !unitName) {
+        toast.error('Please select a property and a unit.');
+        return;
     }
-    
-    const finalUnitName = isFromUrl ? unitName : (units.find(u => u.id === unitId || u.name === unitId)?.name || 'N/A');
-    const finalPropertyName = isFromUrl ? propertyName : (properties.find(p => p.id === propertyId)?.name || 'N/A');
+
+    if (occupiedUnits.includes(unitName)) {
+        toast.error('This unit is already occupied.');
+        return;
+    }
 
     try {
+      const selectedProperty = properties.find(p => p.id === propertyId);
       await addDoc(collection(db, 'tenants'), {
         userId: user.uid,
         name,
         email,
         phone,
         propertyId,
-        unitId, // This will be either the unique ID or the unit name
-        unitName: finalUnitName,
-        propertyName: finalPropertyName, 
-        balance: 0, 
-        createdAt: new Date(),
+        unitName,
+        propertyName: selectedProperty?.name || ''
       });
 
-      toast.success('Tenant added successfully!');
-      router.push('/properties'); // Redirect to properties page
+      toast.success(`Tenant ${name} added to ${selectedProperty?.name} successfully!`);
+      router.push('/tenants');
     } catch (error) {
       console.error("Error adding tenant: ", error);
       toast.error('Failed to add tenant. Please try again.');
@@ -135,67 +126,49 @@ export default function AddTenantPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
+             <div className="space-y-2">
+                <label htmlFor="name">Full Name</label>
+                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+            </div>
             <div className="space-y-2">
-              <label htmlFor="name" className="font-semibold">Full Name</label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="John Doe" required />
+                <label htmlFor="email">Email Address</label>
+                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+                <label htmlFor="phone">Phone Number</label>
+                <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="email" className="font-semibold">Email Address</label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="johndoe@example.com" />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="phone" className="font-semibold">Phone Number</label>
-              <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 (555) 555-5555" />
-            </div>
-
-            {isFromUrl ? (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="font-semibold">Property</label>
-                  <Input value={propertyName} disabled />
-                </div>
-                <div className="space-y-2">
-                  <label className="font-semibold">Unit</label>
-                  <Input value={unitName} disabled />
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label htmlFor="property" className="font-semibold">Property</label>
-                  <Select onValueChange={handlePropertyChange} value={propertyId}>
+                <label htmlFor="property">Property</label>
+                <Select value={propertyId} onValueChange={setPropertyId} disabled={isFromUrl}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a property" />
+                        <SelectValue placeholder="Select a property" />
                     </SelectTrigger>
                     <SelectContent>
-                      {properties.map(prop => (
-                        <SelectItem key={prop.id} value={prop.id}>{prop.name}</SelectItem>
-                      ))}
+                        {properties.map(p => (
+                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        ))}
                     </SelectContent>
-                  </Select>
+                </Select>
+            </div>
+
+            {propertyId && (
+                 <div className="space-y-2">
+                    <label htmlFor="unit">Unit</label>
+                    <Select value={unitName} onValueChange={setUnitName}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a unit" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {units.map((u, index) => (
+                                <SelectItem key={index} value={u.name} disabled={occupiedUnits.includes(u.name)}>
+                                    {u.name} {occupiedUnits.includes(u.name) && "(Occupied)"}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
-                <div className="space-y-2">
-                  <label htmlFor="unit" className="font-semibold">Unit</label>
-                  <Select onValueChange={handleUnitChange} value={unitId} disabled={!propertyId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a unit" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {units.map((unit, index) => (
-                        <SelectItem 
-                          key={unit.id || index} 
-                          value={unit.id || unit.name} // Use name as fallback value
-                          disabled={occupiedUnitIds.has(unit.id) || occupiedUnitIds.has(unit.name)}
-                        >
-                          {unit.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
             )}
 
             <div className="flex justify-end pt-4">

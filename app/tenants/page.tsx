@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, FormEvent } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, getDoc, deleteDoc } from 'firebase/firestore';
 import { useAuth } from '@/app/AuthProvider';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { MoreHorizontal, Eye, Pencil, Trash2 } from 'lucide-react';
@@ -20,13 +20,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { toast } from 'sonner';
+import { Tenant } from '@/lib/types';
 
 export default function TenantsPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const propertyId = searchParams.get('propertyId');
 
-  const [tenants, setTenants] = useState([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [pageTitle, setPageTitle] = useState('Tenants');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -59,7 +60,21 @@ export default function TenantsPage() {
                   propertyName = propDoc.data().name;
               }
           }
-          return { id: tenantDoc.id, ...tenantData, propertyName };
+          let unitName = 'N/A';
+          if (tenantData.unitId) {
+            const unitDoc = await getDoc(doc(db, 'units', tenantData.unitId));
+            if (unitDoc.exists()) {
+                unitName = unitDoc.data().name;
+            }
+          }
+          return {
+            id: tenantDoc.id,
+            name: tenantData.name,
+            email: tenantData.email,
+            phone: tenantData.phone,
+            propertyName,
+            unitName,
+          } as Tenant;
       }));
         setTenants(tenantsData);
       };
@@ -67,7 +82,7 @@ export default function TenantsPage() {
     }
   }, [user, propertyId]);
 
-  const handleDelete = async (tenantId) => {
+  const handleDelete = async (tenantId: string) => {
     if (!confirm('Are you sure you want to delete this tenant?')) return;
 
     try {
@@ -94,7 +109,7 @@ export default function TenantsPage() {
            <Input
               placeholder="Search tenants..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e: FormEvent<HTMLInputElement>) => setSearchTerm(e.currentTarget.value)}
               className="max-w-sm hidden sm:block"
             />
             <Link href={addTenantLink}>
@@ -105,7 +120,7 @@ export default function TenantsPage() {
        <Input
         placeholder="Search tenants..."
         value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
+        onChange={(e: FormEvent<HTMLInputElement>) => setSearchTerm(e.currentTarget.value)}
         className="max-w-sm sm:hidden mb-4"
       />
 
@@ -157,11 +172,11 @@ export default function TenantsPage() {
               <TableBody>
                 {filteredTenants.map(tenant => (
                   <TableRow key={tenant.id}>
-                    <TableCell className="font-medium">{tenant.name}</TableCell>
-                    <TableCell>{tenant.propertyName}</TableCell>
-                    <TableCell>{tenant.unitName}</TableCell>
+                    <TableCell className="font-.medium">{tenant.name}</TableCell>
+                    <TableCell>{tenant.propertyName ?? 'N/A'}</TableCell>
+                    <TableCell>{tenant.unitName ?? 'N/A'}</TableCell>
                     <TableCell>{tenant.email}</TableCell>
-                    <TableCell>{tenant.phone}</TableCell>
+                    <TableCell>{tenant.phone ?? 'N/A'}</TableCell>
                     <TableCell className="text-right">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>

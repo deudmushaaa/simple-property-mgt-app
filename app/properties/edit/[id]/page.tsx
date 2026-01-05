@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
@@ -9,10 +9,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { Property } from '@/lib/types';
 
 export default function EditPropertyPage() {
   const router = useRouter();
-  const { id } = useParams();
+  const params = useParams();
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const { user } = useAuth();
   
   const [name, setName] = useState('');
@@ -26,7 +28,7 @@ export default function EditPropertyPage() {
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists() && docSnap.data().userId === user.uid) {
-          const data = docSnap.data();
+          const data = docSnap.data() as Property;
           setName(data.name);
           setAddress(data.address);
         } else {
@@ -40,10 +42,10 @@ export default function EditPropertyPage() {
     fetchProperty();
   }, [user, id, router]);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    if (!user) {
+    if (!user || !id) {
       toast.error('You must be logged in to edit a property.');
       return;
     }
@@ -77,12 +79,12 @@ export default function EditPropertyPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <label htmlFor="name" className="font-semibold">Property Name</label>
-              <Input id="name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Downtown Apartments" required />
+              <Input id="name" type="text" value={name} onChange={(e: ChangeEvent<HTMLInputElement>) => setName(e.target.value)} placeholder="e.g., Downtown Apartments" required />
             </div>
 
             <div className="space-y-2">
               <label htmlFor="address" className="font-semibold">Address</label>
-              <Input id="address" type="text" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="e.g., 123 Main St, Anytown USA" required />
+              <Input id="address" type="text" value={address} onChange={(e: ChangeEvent<HTMLInputElement>) => setAddress(e.target.value)} placeholder="e.g., 123 Main St, Anytown USA" required />
             </div>
 
             <div className="flex justify-end pt-4">

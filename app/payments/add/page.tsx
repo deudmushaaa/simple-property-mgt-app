@@ -12,7 +12,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Combobox } from '@/components/ui/combobox';
 import { toast } from 'sonner';
 
-async function getNextReceiptNumber(userId) {
+interface Tenant {
+    id: string;
+    name: string;
+    propertyName: string;
+    unitName: string;
+    balance: number;
+    userId: string;
+    propertyId: string;
+}
+
+async function getNextReceiptNumber(userId: string) {
   const paymentsQuery = query(
     collection(db, 'payments'), 
     where('userId', '==', userId), 
@@ -31,8 +41,8 @@ export default function AddPaymentPage() {
   const router = useRouter();
   const { user } = useAuth();
   
-  const [tenants, setTenants] = useState([]);
-  const [selectedTenant, setSelectedTenant] = useState(null);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const [amount, setAmount] = useState('');
   const [paymentType, setPaymentType] = useState('Rent');
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
@@ -42,19 +52,19 @@ export default function AddPaymentPage() {
       if (user) {
         const q = query(collection(db, 'tenants'), where('userId', '==', user.uid));
         const snapshot = await getDocs(q);
-        const tenantsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const tenantsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Tenant[];
         setTenants(tenantsData);
       }
     };
     fetchTenants();
   }, [user]);
 
-  const handleTenantChange = (tenantId) => {
+  const handleTenantChange = (tenantId: string) => {
     const tenant = tenants.find(t => t.id === tenantId);
-    setSelectedTenant(tenant);
+    setSelectedTenant(tenant || null);
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!user || !selectedTenant || !amount) {
@@ -70,7 +80,7 @@ export default function AddPaymentPage() {
       const tenantRef = doc(db, 'tenants', selectedTenant.id);
       const tenantSnap = await getDoc(tenantRef);
       const currentTenantData = tenantSnap.data();
-      const currentBalance = currentTenantData.balance || 0;
+      const currentBalance = currentTenantData?.balance || 0;
       const balanceAfterPayment = currentBalance - paymentAmount;
       
       // 1. Add payment record with the new balance
