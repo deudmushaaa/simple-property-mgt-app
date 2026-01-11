@@ -14,15 +14,15 @@ import { Payment } from '@/lib/types';
 
 // Helper to safely format dates
 const formatDate = (date: any) => {
-    if (!date) return 'N/A';
-    if (date.toDate) return date.toDate().toLocaleDateString();
-    return new Date(date).toLocaleDateString();
+  if (!date) return 'N/A';
+  if (date.toDate) return date.toDate().toLocaleDateString();
+  return new Date(date).toLocaleDateString();
 }
 
 // Helper to safely format currency
 const formatCurrency = (amount: any) => {
-    if (typeof amount !== 'number') return '0.00';
-    return amount.toLocaleString();
+  if (typeof amount !== 'number') return '0.00';
+  return amount.toLocaleString();
 }
 
 export default function ReceiptPage() {
@@ -36,8 +36,8 @@ export default function ReceiptPage() {
   useEffect(() => {
     const fetchPaymentDetails = async () => {
       if (!user || !receiptId) {
-          setLoading(false);
-          return;
+        setLoading(false);
+        return;
       }
 
       try {
@@ -93,32 +93,32 @@ export default function ReceiptPage() {
 
   return (
     <div className="container mx-auto py-10 max-w-4xl">
-       <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold">Payment Receipt</h1>
-            {/* Mentor's fix for conditional rendering implemented here */}
-            {payment ? (
-                <PDFDownloadLink
-                    document={<ReceiptDocument payment={payment} />}
-                    fileName={`Receipt-${payment.receiptNumber || '000'}.pdf`}
-                >
-                    {({ loading }) => (
-                        <Button disabled={loading} variant="outline" className="gap-2">
-                        <Download className="h-4 w-4" />
-                        {loading ? 'Generating PDF...' : 'Download Receipt'}
-                        </Button>
-                    )}
-                </PDFDownloadLink>
-            ) : (
-                <Button disabled variant="outline" className="gap-2">
-                    <Download className="h-4 w-4" />
-                    Loading Data...
-                </Button>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Payment Receipt</h1>
+        {/* Mentor's fix for conditional rendering implemented here */}
+        {payment ? (
+          <PDFDownloadLink
+            document={<ReceiptDocument payment={payment} />}
+            fileName={`Receipt-${payment.receiptNumber || '000'}.pdf`}
+          >
+            {({ loading }) => (
+              <Button disabled={loading} variant="outline" className="gap-2">
+                <Download className="h-4 w-4" />
+                {loading ? 'Generating PDF...' : 'Download Receipt'}
+              </Button>
             )}
-        </div>
+          </PDFDownloadLink>
+        ) : (
+          <Button disabled variant="outline" className="gap-2">
+            <Download className="h-4 w-4" />
+            Loading Data...
+          </Button>
+        )}
+      </div>
       <div className="p-8 bg-white rounded-lg shadow-lg border border-gray-200">
         <header className="flex justify-between items-center pb-6 border-b-2 border-gray-100">
           <div>
-            <h2 className="text-2xl font-bold text-gray-800">Senra Technologies</h2>
+            <h2 className="text-2xl font-bold text-gray-800">Property Payment Receipt</h2>
             <p className="text-gray-500">Simplified Property Management</p>
           </div>
           <div className="text-right">
@@ -140,52 +140,52 @@ export default function ReceiptPage() {
         </section>
 
         <section className="mt-8">
-            <div className="border rounded-lg">
-                <table className="w-full text-left">
-                    <thead>
-                        <tr className="bg-gray-50">
-                            <th className="p-4 font-semibold text-gray-700">Description</th>
-                            <th className="p-4 text-right font-semibold text-gray-700">Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr className="border-b border-gray-100">
-                            <td className="p-4 text-gray-800">{payment.type} Payment</td>
-                            <td className="p-4 text-right text-gray-800">UGX {formatCurrency(payment.amount)}</td>
-                        </tr>
-                        {payment.months && payment.months.length > 0 && (
-                            <tr className="bg-gray-50">
-                                <td className="p-4 text-gray-600 font-medium">For Months</td>
-                                <td className="p-4 text-right text-gray-600">{payment.months.join(', ')}</td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
+          <div className="border rounded-lg">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="p-4 font-semibold text-gray-700">Description</th>
+                  <th className="p-4 text-right font-semibold text-gray-700">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b border-gray-100">
+                  <td className="p-4 text-gray-800">{payment.type} Payment</td>
+                  <td className="p-4 text-right text-gray-800">UGX {formatCurrency(payment.amount)}</td>
+                </tr>
+                {payment.months && payment.months.length > 0 && (
+                  <tr className="bg-gray-50">
+                    <td className="p-4 text-gray-600 font-medium">For Months</td>
+                    <td className="p-4 text-right text-gray-600">{payment.months.join(', ')}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </section>
 
         <section className="flex justify-end mt-8">
           <div className="w-full max-w-sm">
-              <div className="flex justify-between py-2">
-                  <span className="font-semibold text-gray-600">Amount Paid</span>
-                  <span className="text-gray-800">UGX {formatCurrency(payment.amount)}</span>
-              </div>
-              <div className="flex justify-between py-2">
-                  <span className="font-semibold text-gray-600">Remaining Balance</span>
-                  <span className={(payment.balanceAfterPayment ?? 0) > 0 ? 'text-red-500' : 'text-green-500'}>
-                    UGX {formatCurrency(payment.balanceAfterPayment ?? 0)}
-                  </span>
-              </div>
-              <div className="flex justify-between py-3 font-bold text-xl border-t-2 border-gray-200 mt-2">
-                  <span className="text-gray-800">Total Paid</span>
-                  <span className="text-indigo-600">UGX {formatCurrency(payment.amount)}</span>
-              </div>
+            <div className="flex justify-between py-2">
+              <span className="font-semibold text-gray-600">Amount Paid</span>
+              <span className="text-gray-800">UGX {formatCurrency(payment.amount)}</span>
+            </div>
+            <div className="flex justify-between py-2">
+              <span className="font-semibold text-gray-600">Remaining Balance</span>
+              <span className={(payment.balanceAfterPayment ?? 0) > 0 ? 'text-red-500' : 'text-green-500'}>
+                UGX {formatCurrency(payment.balanceAfterPayment ?? 0)}
+              </span>
+            </div>
+            <div className="flex justify-between py-3 font-bold text-xl border-t-2 border-gray-200 mt-2">
+              <span className="text-gray-800">Total Paid</span>
+              <span className="text-indigo-600">UGX {formatCurrency(payment.amount)}</span>
+            </div>
           </div>
         </section>
 
         <footer className="mt-12 pt-6 border-t text-center text-gray-500">
-            <p>Thank you for your business!</p>
-            <p>Generated by Senra Technologies</p>
+          <p>Thank you for your business!</p>
+          <p>Generated by Senra Technologies</p>
         </footer>
       </div>
     </div>

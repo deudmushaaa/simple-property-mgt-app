@@ -18,6 +18,7 @@ export const requestNotificationPermission = async () => {
   }
 
   try {
+    const messaging = getMessaging(app);
     const permission = await Notification.requestPermission();
 
     if (permission === "granted") {
@@ -46,13 +47,18 @@ export const requestNotificationPermission = async () => {
 };
 
 export const onMessageListener = (callback: (payload: MessagePayload) => void) => {
-    if (typeof window === 'undefined') {
-        // Return a no-op function for SSR
-        return () => {};
-    }
+  if (typeof window === 'undefined') {
+    return () => { };
+  }
+
+  try {
     const messaging = getMessaging(app);
     return onMessage(messaging, (payload) => {
       console.log("New message received. ", payload);
       callback(payload);
     });
+  } catch (error) {
+    console.warn("Firebase Messaging not supported or failed to initialize:", error);
+    return () => { };
+  }
 };

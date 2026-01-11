@@ -37,14 +37,15 @@ export default function AddTenantPage() {
   const [occupiedUnits, setOccupiedUnits] = useState<string[]>([]);
   const [isFromUrl, setIsFromUrl] = useState(false);
 
-  const fetchOccupiedUnits = useCallback(async (propertyId: string) => {
-      const tenantsQuery = query(
-          collection(db, 'tenants'), 
-          where('propertyId', '==', propertyId)
-      );
-      const tenantsSnapshot = await getDocs(tenantsQuery);
-      const occupied = tenantsSnapshot.docs.map(doc => doc.data().unitName);
-      setOccupiedUnits(occupied);
+  const fetchOccupiedUnits = useCallback(async (propertyId: string, userId: string) => {
+    const tenantsQuery = query(
+      collection(db, 'tenants'),
+      where('propertyId', '==', propertyId),
+      where('userId', '==', userId)
+    );
+    const tenantsSnapshot = await getDocs(tenantsQuery);
+    const occupied = tenantsSnapshot.docs.map(doc => doc.data().unitName);
+    setOccupiedUnits(occupied);
   }, []);
 
   useEffect(() => {
@@ -55,10 +56,10 @@ export default function AddTenantPage() {
         const propsList = propsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
         setProperties(propsList);
 
-        const propertyIdFromUrl = searchParams.get('propertyId');
+        const propertyIdFromUrl = searchParams?.get('propertyId');
         if (propertyIdFromUrl) {
           const propExists = propsList.some(p => p.id === propertyIdFromUrl);
-          if(propExists) {
+          if (propExists) {
             setPropertyId(propertyIdFromUrl);
             setIsFromUrl(true);
           }
@@ -69,17 +70,17 @@ export default function AddTenantPage() {
   }, [user, searchParams]);
 
   useEffect(() => {
-    if (propertyId) {
+    if (propertyId && user) {
       const fetchUnits = async () => {
         const propertyDoc = await getDoc(doc(db, 'properties', propertyId));
         if (propertyDoc.exists()) {
           setUnits(propertyDoc.data().units || []);
-          fetchOccupiedUnits(propertyId);
+          fetchOccupiedUnits(propertyId, user.uid);
         }
       };
       fetchUnits();
     }
-  }, [propertyId, fetchOccupiedUnits]);
+  }, [propertyId, user, fetchOccupiedUnits]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -89,13 +90,13 @@ export default function AddTenantPage() {
     }
 
     if (!propertyId || !unitName) {
-        toast.error('Please select a property and a unit.');
-        return;
+      toast.error('Please select a property and a unit.');
+      return;
     }
 
     if (occupiedUnits.includes(unitName)) {
-        toast.error('This unit is already occupied.');
-        return;
+      toast.error('This unit is already occupied.');
+      return;
     }
 
     try {
@@ -126,49 +127,49 @@ export default function AddTenantPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-             <div className="space-y-2">
-                <label htmlFor="name">Full Name</label>
-                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+            <div className="space-y-2">
+              <label htmlFor="name">Full Name</label>
+              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
             </div>
             <div className="space-y-2">
-                <label htmlFor="email">Email Address</label>
-                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <label htmlFor="email">Email Address</label>
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </div>
             <div className="space-y-2">
-                <label htmlFor="phone">Phone Number</label>
-                <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+              <label htmlFor="phone">Phone Number</label>
+              <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
             </div>
 
             <div className="space-y-2">
-                <label htmlFor="property">Property</label>
-                <Select value={propertyId} onValueChange={setPropertyId} disabled={isFromUrl}>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Select a property" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {properties.map(p => (
-                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+              <label htmlFor="property">Property</label>
+              <Select value={propertyId} onValueChange={setPropertyId} disabled={isFromUrl}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a property" />
+                </SelectTrigger>
+                <SelectContent>
+                  {properties.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {propertyId && (
-                 <div className="space-y-2">
-                    <label htmlFor="unit">Unit</label>
-                    <Select value={unitName} onValueChange={setUnitName}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select a unit" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {units.map((u, index) => (
-                                <SelectItem key={index} value={u.name} disabled={occupiedUnits.includes(u.name)}>
-                                    {u.name} {occupiedUnits.includes(u.name) && "(Occupied)"}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
+              <div className="space-y-2">
+                <label htmlFor="unit">Unit</label>
+                <Select value={unitName} onValueChange={setUnitName}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a unit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {units.map((u, index) => (
+                      <SelectItem key={index} value={u.name} disabled={occupiedUnits.includes(u.name)}>
+                        {u.name} {occupiedUnits.includes(u.name) && "(Occupied)"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
 
             <div className="flex justify-end pt-4">

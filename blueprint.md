@@ -1,1 +1,31 @@
-# Karibu - Property Management SaaS\n\n## Overview\n\nKaribu is a comprehensive SaaS platform designed for property managers and landlords to streamline their operations. It offers a suite of tools to manage properties, tenants, leases, and maintenance requests in a single, intuitive dashboard.\n\n## Design & Features\n\n### Authentication\n\n*   **Unified Auth Flow:** A centralized authentication component handles both user sign-in and sign-up, providing a consistent user experience.\n*   **Email & Password:** Users can create an account and sign in using their email and a secure password (minimum 8 characters).\n*   **Google Sign-In:** Seamless one-click sign-in and sign-up using Google accounts, leveraging Firebase Authentication\'s redirect flow to prevent popup blocker issues.\n*   **Secure & Validated:** All authentication actions are validated against a schema to ensure data integrity.\n\n### Dashboard\n\n*   **Centralized Hub:** The main dashboard provides a high-level overview of the user\'s properties, tenant status, and recent activities.\n*   **Responsive Design:** The application is fully responsive, ensuring a seamless experience on both desktop and mobile devices.\n\n## Current Plan\n\n**Objective:** Fix authentication issues and improve user experience.\n\n**Steps:**\n\n1.  **DONE:** Created a unified, reusable authentication component (`components/auth/user-auth-form.tsx`) to handle all authentication logic.\n2.  **DONE:** Switched the Google Sign-In method from `signInWithPopup` to `signInWithRedirect` in `lib/auth.ts` to resolve browser popup-blocking errors.\n3.  **DONE:** Implemented the sign-up logic within the unified auth component, including a password field and validation.\n4.  **DONE:** Updated the login page (`app/login/page.tsx`) to use the new, simplified authentication component.\n5.  **DONE:** Created a new sign-up page (`app/signup/page.tsx`) that also utilizes the unified authentication component.\n6.  **DONE:** Updated this blueprint to reflect the new, robust authentication system.\n
+# Karibu - Property Management SaaS
+
+## Overview
+
+Karibu is a comprehensive SaaS platform designed for property managers and landlords to streamline their operations. It offers a suite of tools to manage properties, tenants, leases, and maintenance requests in a single, intuitive dashboard.
+
+## Design & Features
+
+### Authentication
+
+*   **Unified Auth Flow:** A centralized authentication component handles both user sign-in and sign-up, providing a consistent user experience.
+*   **Email & Password:** Users can create an account and sign in using their email and a secure password (minimum 8 characters).
+*   **Google Sign-In:** Seamless one-click sign-in and sign-up using Google accounts, leveraging Firebase Authentication's redirect flow to prevent popup blocker issues.
+*   **Secure & Validated:** All authentication actions are validated against a schema to ensure data integrity.
+
+### Dashboard
+
+*   **Centralized Hub:** The main dashboard provides a high-level overview of the user's properties, tenant status, and recent activities.
+*   **Responsive Design:** The application is fully responsive, ensuring a seamless experience on both desktop and mobile devices.
+
+## Current Plan
+
+**Objective:** Rebuild the user authentication form with a professional design and robust validation.
+
+**Steps:**
+
+1.  **DONE:** Rewrite `components/auth/user-auth-form.tsx` using Shadcn Form (`react-hook-form` + `zod`).
+2.  **DONE:** Implement toggle between "Login" and "Sign Up" modes within the form.
+3.  **DONE:** Integrate with Firebase Authentication (`signInWithEmailAndPassword`, `createUserWithEmailAndPassword`).
+4.  **DONE:** Style with a professional consulting aesthetic using Tailwind CSS.
+5.  **DONE:** Update `app/login/page.tsx` and `app/signup/page.tsx` to utilize the improved component properly.

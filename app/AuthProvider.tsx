@@ -15,6 +15,20 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({ user: null, loading: true });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  // fast-fail if config is missing
+  if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+    return (
+      <div className="flex h-screen items-center justify-center p-4 text-center">
+        <div className="max-w-md rounded-lg border-2 border-destructive bg-destructive/10 p-6 text-destructive-foreground">
+          <h2 className="text-lg font-bold">Configuration Error</h2>
+          <p className="mt-2 text-sm text-foreground">
+            Firebase API Key is missing. Please check your <code className="font-mono bg-muted px-1 rounded">.env.local</code> file.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const [user, loading, error] = useAuthState(auth);
 
   if (loading) {

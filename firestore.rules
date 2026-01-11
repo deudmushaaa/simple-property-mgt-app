@@ -25,8 +25,8 @@ service cloud.firestore {
     match /tenants/{tenantId} {
       // To create a tenant, you must own the property it belongs to
       allow create: if request.auth != null && get(/databases/$(database)/documents/properties/$(request.resource.data.propertyId)).data.userId == request.auth.uid;
-      // To manage a tenant, you must own the property it belongs to
-      allow read, update, delete: if request.auth != null && get(/databases/$(database)/documents/properties/$(resource.data.propertyId)).data.userId == request.auth.uid;
+      // To manage a tenant, you must be the user who records it (landlord)
+      allow read, update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
 
     // Payments belong to a property
