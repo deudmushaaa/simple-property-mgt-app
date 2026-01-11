@@ -13,7 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function ReceiptPage() {
   const { user } = useAuth();
-  const { id } = useParams();
+  const params = useParams() as any;
+  const { id } = params;
   const [payment, setPayment] = useState<Payment | null>(null);
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [property, setProperty] = useState<Property | null>(null);
@@ -55,7 +56,7 @@ export default function ReceiptPage() {
               setLoading(false);
               return;
             }
-            
+
             const tenantData = { id: tenantDocSnap.id, ...tenantDocSnap.data() } as Tenant;
             const propertyData = { id: propertyDocSnap.id, ...propertyDocSnap.data() } as Property;
 
@@ -92,28 +93,28 @@ export default function ReceiptPage() {
 
   return (
     <div className="container mx-auto py-10">
-        <Card className="overflow-hidden">
-            <CardHeader className="flex flex-row items-center justify-between bg-gray-50 dark:bg-gray-800 p-4 border-b">
-                <CardTitle className="text-lg font-semibold">Receipt #{payment.id.substring(0, 8)}</CardTitle>
-                <PDFDownloadLink 
-                  document={<ReceiptDocument payment={payment} tenant={tenant} property={property} />} 
-                  fileName={`receipt-${payment.id.substring(0, 8)}.pdf`}
-                >
-                    {({ loading }) => 
-                        <Button variant="outline" disabled={loading}>
-                          {loading ? 'Generating PDF...' : 'Download PDF'}
-                        </Button>
-                    }
-                </PDFDownloadLink>
-            </CardHeader>
-            <CardContent className="p-0">
-                <div style={{ height: 'calc(100vh - 200px)' }}>
-                    <PDFViewer style={{ width: '100%', height: '100%' }} showToolbar={false}>
-                        <ReceiptDocument payment={payment} tenant={tenant} property={property} />
-                    </PDFViewer>
-                </div>
-            </CardContent>
-        </Card>
+      <Card className="overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between bg-gray-50 dark:bg-gray-800 p-4 border-b">
+          <CardTitle className="text-lg font-semibold">Receipt #{payment.id.substring(0, 8)}</CardTitle>
+          <PDFDownloadLink
+            document={<ReceiptDocument payment={payment} tenant={tenant} property={property} />}
+            fileName={`receipt-${payment.id.substring(0, 8)}.pdf`}
+          >
+            {({ loading }) =>
+              <Button variant="outline" disabled={loading}>
+                {loading ? 'Generating PDF...' : 'Download PDF'}
+              </Button>
+            }
+          </PDFDownloadLink>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div style={{ height: 'calc(100vh - 200px)' }}>
+            <PDFViewer style={{ width: '100%', height: '100%' }} showToolbar={false}>
+              <ReceiptDocument payment={payment} tenant={tenant} property={property} />
+            </PDFViewer>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
