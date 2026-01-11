@@ -14,5 +14,9 @@ if (!admin.apps.length) {
     console.error('Firebase admin initialization error', error);
   }
 }
+// These make it easier to use in other files!
+export const adminDb = admin.firestore();
+export const adminAuth = admin.auth();
+export const adminMessaging = admin.messaging();
 
 export { admin };
