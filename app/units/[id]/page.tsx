@@ -5,20 +5,22 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Unit, Tenant, Property } from '@/lib/types';
+import { use } from 'react';
 
 interface PageProps {
-    params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default function UnitDetailsPage({ params }: PageProps) {
+  const { id } = use(params);
   const [unit, setUnit] = useState<Unit | null>(null);
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [property, setProperty] = useState<Property | null>(null);
 
   useEffect(() => {
-    if (params.id) {
+    if (id) {
       const fetchUnitDetails = async () => {
-        const unitDocRef = doc(db, 'units', params.id);
+        const unitDocRef = doc(db, 'units', id);
         const unitDocSnap = await getDoc(unitDocRef);
 
         if (unitDocSnap.exists()) {
@@ -33,7 +35,7 @@ export default function UnitDetailsPage({ params }: PageProps) {
           }
 
           // Find the tenant assigned to this unit
-          const tenantsQuery = query(collection(db, 'tenants'), where('unitId', '==', params.id));
+          const tenantsQuery = query(collection(db, 'tenants'), where('unitId', '==', id));
           const tenantsSnapshot = await getDocs(tenantsQuery);
           if (!tenantsSnapshot.empty) {
             const tenantDoc = tenantsSnapshot.docs[0];
@@ -44,7 +46,7 @@ export default function UnitDetailsPage({ params }: PageProps) {
 
       fetchUnitDetails();
     }
-  }, [params.id]);
+  }, [id]);
 
   if (!unit) {
     return <div>Loading...</div>;
