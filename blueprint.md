@@ -13,19 +13,24 @@ Karibu is a comprehensive SaaS platform designed for property managers and landl
 *   **Google Sign-In:** Seamless one-click sign-in and sign-up using Google accounts, leveraging Firebase Authentication's redirect flow to prevent popup blocker issues.
 *   **Secure & Validated:** All authentication actions are validated against a schema to ensure data integrity.
 
-### Dashboard
+### Dashboard & Navigation
+*   **Streamlined Layout:** Simplified mobile and desktop navigation. Removed redundant branding and simplified access to key actions.
+*   **Quick Actions:** Added "Record Payment" (Mobile) and "Add Receipt" (Desktop) buttons for quick access.
 
-*   **Centralized Hub:** The main dashboard provides a high-level overview of the user's properties, tenant status, and recent activities.
-*   **Responsive Design:** The application is fully responsive, ensuring a seamless experience on both desktop and mobile devices.
+### Security & Permissions
+*   **Role-Based Access (RBA):** Strict access control ensuring users can only manage their own Properties, Tenants, and Payments.
+*   **Validation:** Secure Firestore rules enforcing ownership checks at the database level.
 
 ## Current Plan
 
-**Objective:** Rebuild the user authentication form with a professional design and robust validation.
+**Objective:** Finalize production deployment and polish core features.
 
 **Steps:**
 
 1.  **DONE:** Rewrite `components/auth/user-auth-form.tsx` using Shadcn Form (`react-hook-form` + `zod`).
 2.  **DONE:** Implement toggle between "Login" and "Sign Up" modes within the form.
 3.  **DONE:** Integrate with Firebase Authentication (`signInWithEmailAndPassword`, `createUserWithEmailAndPassword`).
-4.  **DONE:** Style with a professional consulting aesthetic using Tailwind CSS.
-5.  **DONE:** Update `app/login/page.tsx` and `app/signup/page.tsx` to utilize the improved component properly.
+4.  **DONE:** Dashboard UI Polish (Removed "Karibu" title on mobile, updated button labels).
+5.  **DONE:** Fix "Missing or insufficient permissions" error in Tenant creation.
+6.  **DONE:** Fix Next.js 15 `useParams` Promise awaiting issues.
+7.  **DONE:** Production Build & Vercel Deployment configuration (Environment Variables, ESLint rules).

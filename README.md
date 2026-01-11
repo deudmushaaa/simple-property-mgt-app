@@ -43,3 +43,19 @@ Competitors include ; True Soil, Credo Mgt, Alinda, RentalLyk.
 ## BUSINESS MODEL
 We shall run a low-cost, subscription model.
 Clients pay a one-off followed by a regular yearly payment.
+
+## DEPLOYMENT SETTINGS (VERCEL)
+
+To deploy this application on Vercel, you must configure the following **Environment Variables** in your Vercel Project Settings. Ensure they match your Firebase configuration and importantly, **must start with `NEXT_PUBLIC_`** to be visible to the application in the browser.
+
+| Variable Name | Description |
+| :--- | :--- |
+| `NEXT_PUBLIC_FIREBASE_API_KEY` | Your Firebase API Key |
+| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Your Firebase Auth Domain |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Your Firebase Project ID |
+| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Your Firebase Storage Bucket |
+| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Your Firebase Messaging Sender ID |
+| `NEXT_PUBLIC_FIREBASE_APP_ID` | Your Firebase App ID |
+| `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID` | Your Firebase Measurement ID |
+
+> **Note:** Failed to include `NEXT_PUBLIC_` prefix on these variables will result in a blank screen or "Application error: a client-side exception has occurred" because the browser cannot access the configuration to initialize Firebase.
