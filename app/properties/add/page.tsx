@@ -3,7 +3,7 @@
 import { useState, FormEvent, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, writeBatch } from 'firebase/firestore';
+import { collection, addDoc } from 'firebase/firestore';
 import { useAuth } from '@/app/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,26 +35,20 @@ export default function AddPropertyPage() {
     }
 
     try {
-      // Create the property first to get an ID
-      const propertyRef = await addDoc(collection(db, 'properties'), {
+      const units = [];
+      for (let i = 1; i <= numUnits; i++) {
+        units.push({ name: `${unitPrefix}${i}` });
+      }
+
+      await addDoc(collection(db, 'properties'), {
         userId: user.uid,
         name,
         address,
+        units,
         createdAt: new Date(),
       });
 
-      // Now, create a batch to add all the units
-      const batch = writeBatch(db);
-      for (let i = 1; i <= numUnits; i++) {
-        addDoc(collection(db, 'units'), {
-            propertyId: propertyRef.id,
-            name: `${unitPrefix}${i}`
-        });
-      }
-      await batch.commit();
-
-
-      toast.success(`${numUnits} units created for property ${name} successfully!`);
+      toast.success(`Property ${name} with ${numUnits} units created successfully!`);
       router.push('/properties');
     } catch (error) {
       console.error("Error adding property: ", error);

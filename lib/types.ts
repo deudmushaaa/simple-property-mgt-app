@@ -16,27 +16,26 @@ export interface Tenant {
   id: string;
   name: string;
   email: string;
-  // Denormalized and optional fields for display purposes
+  phone?: string;
   propertyId?: string;
   unitId?: string;
   propertyName?: string;
   unitName?: string;
-  phone?: string;
 }
 
 export interface Payment {
-  id: string;
-  userId: string; // For authorization
+  id:string;
+  userId: string;
   tenantId: string;
   propertyId: string;
   unitId: string;
   amount: number;
   date: Timestamp;
   type: 'rent' | 'deposit' | 'other';
+  months?: string[]; // Made optional as per mentor's advice
   receiptNumber?: string;
-  balanceAfterPayment?: number;
-  // Denormalized fields for easy display
   tenantName?: string;
-  unitName?: string;
   propertyName?: string;
+  unitName?: string;
+  balanceAfterPayment?: number;
 }

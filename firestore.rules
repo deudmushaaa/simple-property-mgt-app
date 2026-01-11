@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -9,46 +8,33 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Allow users to manage their own user data
+    // Users can manage their own user document
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
-
-      // Allow users to manage their own notification tokens
-      match /tokens/{tokenId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
     }
 
-    // Rules for properties
+    // Properties are the root of ownership
     match /properties/{propertyId} {
-      // Allow user to create a property if they are the owner
+      // A user can create a property for themselves
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      // Allow user to read, update, or delete their own property
+      // Only the owner can read, update, or delete their property
       allow read, update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
 
-    // Rules for tenants
+    // Tenants belong to a property
     match /tenants/{tenantId} {
-      // Allow user to create a tenant if they own the associated property
+      // To create a tenant, you must own the property it belongs to
       allow create: if request.auth != null && get(/databases/$(database)/documents/properties/$(request.resource.data.propertyId)).data.userId == request.auth.uid;
-      // Allow user to read, update, or delete a tenant if they own the associated property
+      // To manage a tenant, you must own the property it belongs to
       allow read, update, delete: if request.auth != null && get(/databases/$(database)/documents/properties/$(resource.data.propertyId)).data.userId == request.auth.uid;
     }
 
-    // Rules for payments
+    // Payments belong to a property
     match /payments/{paymentId} {
-        // Allow creating a payment if the user owns the tenant's property
-        allow create: if request.auth != null && get(/databases/$(database)/documents/tenants/$(request.resource.data.tenantId)).data.userId == request.auth.uid;
-        // Allow read, update, delete if the user owns the tenant's property
-        allow read, update, delete: if request.auth != null && get(/databases/$(database)/documents/tenants/$(resource.data.tenantId)).data.userId == request.auth.uid;
-    }
-
-    // Rules for units
-    match /units/{unitId} {
-        // Allow creating a unit if the user owns the property
-        allow create: if request.auth != null && get(/databases/$(database)/documents/properties/$(request.resource.data.propertyId)).data.userId == request.auth.uid;
-        // Allow read, update, delete if the user owns the property
-        allow read, update, delete: if request.auth != null && get(/databases/$(database)/documents/properties/$(resource.data.propertyId)).data.userId == request.auth.uid;
+       // To create a payment, you must own the property it belongs to
+      allow create: if request.auth != null && get(/databases/$(database)/documents/properties/$(request.resource.data.propertyId)).data.userId == request.auth.uid;
+      // To manage a payment, you must own the property it belongs to
+      allow read, update, delete: if request.auth != null && get(/databases/$(database)/documents/properties/$(resource.data.propertyId)).data.userId == request.auth.uid;
     }
   }
 }

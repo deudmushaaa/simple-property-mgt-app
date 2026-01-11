@@ -1,0 +1,1 @@
+import * as z from \"zod\"\n\nexport const userAuthSchema = z.object({\n  email: z.string().email(),\n  password: z.string().min(8, { message: \"Password must be at least 8 characters long\" }),\n})\n

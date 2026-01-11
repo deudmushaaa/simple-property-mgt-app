@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs, orderBy, Timestamp, DocumentData } from 'firebase/firestore';
 import { useAuth } from '@/app/AuthProvider';
@@ -10,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
+import { Eye } from 'lucide-react';
 
 // Interfaces for type safety
 interface Tenant extends DocumentData {
@@ -27,7 +29,7 @@ interface Payment extends DocumentData {
     date: Timestamp;
     amount: number;
     type: string;
-    receiptNumber: string;
+    months: string[];
 }
 
 export default function TenantDetailPage() {
@@ -120,7 +122,6 @@ export default function TenantDetailPage() {
               <h3 className="font-semibold">Lease Information</h3>
               <p><strong>Property:</strong> {tenant.propertyName}</p>
               <p><strong>Unit:</strong> {tenant.unitName}</p>
-              <p><strong>Balance:</strong> ${tenant.balance?.toLocaleString()}</p>
             </div>
           </div>
         </CardContent>
@@ -141,17 +142,25 @@ export default function TenantDetailPage() {
                       <TableRow>
                           <TableHead>Date</TableHead>
                           <TableHead>Amount</TableHead>
+                          <TableHead>Months</TableHead>
                           <TableHead>Type</TableHead>
-                          <TableHead>Receipt</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                   </TableHeader>
                   <TableBody>
                       {filteredPayments.map(payment => (
                           <TableRow key={payment.id}>
                               <TableCell>{payment.date.toDate().toLocaleDateString()}</TableCell>
-                              <TableCell>${payment.amount.toLocaleString()}</TableCell>
+                              <TableCell>UGX {payment.amount.toLocaleString()}</TableCell>
+                              <TableCell>{payment.months?.join(', ') || 'N/A'}</TableCell>
                               <TableCell>{payment.type}</TableCell>
-                              <TableCell>#{payment.receiptNumber}</TableCell>
+                              <TableCell className="text-right">
+                                  <Link href={`/payments/${payment.id}`} passHref>
+                                      <Button variant="outline" size="icon" asChild>
+                                        <a><Eye className="h-4 w-4" /></a>
+                                      </Button>
+                                  </Link>
+                              </TableCell>
                           </TableRow>
                       ))}
                   </TableBody>
