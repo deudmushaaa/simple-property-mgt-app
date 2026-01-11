@@ -32,23 +32,18 @@ export default function Dashboard() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Hey there!</h1>
         <div className="flex gap-2">
-          <div
-            className="cursor-not-allowed"
-            data-state="closed"
-          >
-            <Button
-              className="has-[>svg]:px-3"
-              data-size="default"
-              data-slot="button"
-              data-variant="default"
-              disabled
-            >
-              <Link href="/tenants/add">
-                <CirclePlus className="mr-2 h-4 w-4" />
-                Add Tenant
-              </Link>
-            </Button>
-          </div>
+          <Button asChild className="md:hidden">
+            <Link href="/payments/add">
+              <CirclePlus className="mr-2 h-4 w-4" />
+              Record Payment
+            </Link>
+          </Button>
+          <Button asChild className="hidden md:inline-flex">
+            <Link href="/payments/add">
+              <CirclePlus className="mr-2 h-4 w-4" />
+              Add Receipt
+            </Link>
+          </Button>
           <Link
             className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3"
             data-size="default"

@@ -1,77 +1,36 @@
-# Property Management App Blueprint
+# Karibu - Property Management SaaS
 
 ## Overview
 
-A comprehensive property management application for landlords in Uganda. It allows users to manage their properties, tenants, and payments efficiently. The application is built with Next.js and Firebase, featuring a modern, responsive, and intuitive user interface.
+Karibu is a comprehensive SaaS platform designed for property managers and landlords to streamline their operations. It offers a suite of tools to manage properties, tenants, leases, and maintenance requests in a single, intuitive dashboard.
 
-## Project Outline & Features
+## Design & Features
 
-### Core Architecture
-- **Framework:** Next.js (with App Router)
-- **Authentication:** Firebase Authentication
-- **Database:** Cloud Firestore
-- **Styling:** Tailwind CSS with shadcn/ui components.
-- **State Management:** React Context (for Auth) and component-level state.
-- **Deployment:** Vercel
-- **PWA:** Enabled with `next-pwa` for a native-like experience.
-- **Scheduled Tasks:** Vercel Cron Jobs
+### Authentication
 
-### Implemented Features
+*   **Unified Auth Flow:** A centralized authentication component handles both user sign-in and sign-up, providing a consistent user experience.
+*   **Email & Password:** Users can create an account and sign in using their email and a secure password (minimum 8 characters).
+*   **Google Sign-In:** Seamless one-click sign-in and sign-up using Google accounts, leveraging Firebase Authentication's redirect flow to prevent popup blocker issues.
+*   **Secure & Validated:** All authentication actions are validated against a schema to ensure data integrity.
 
-#### 1. User Authentication
-- **Sign-in/Sign-up:** Users can create an account and log in using email and password.
-- **Authentication State:** The application maintains and provides authentication status throughout the components using a React Context (`AuthProvider`).
-- **Protected Routes:** Pages like the dashboard, properties, and tenants are protected, redirecting unauthenticated users to the login page.
+### Dashboard & Navigation
+*   **Streamlined Layout:** Simplified mobile and desktop navigation. Removed redundant branding and simplified access to key actions.
+*   **Quick Actions:** Added "Record Payment" (Mobile) and "Add Receipt" (Desktop) buttons for quick access.
 
-#### 2. Dashboard (`/dashboard`)
-- **Central Hub:** Serves as the main landing page after login.
-- **At-a-glance Information:** Displays key metrics and quick-access links to major sections of the application.
-- **Responsive Design:** Adapts to various screen sizes.
+### Security & Permissions
+*   **Role-Based Access (RBA):** Strict access control ensuring users can only manage their own Properties, Tenants, and Payments.
+*   **Validation:** Secure Firestore rules enforcing ownership checks at the database level.
 
-#### 3. Property Management (`/properties`)
-- **Property List:** Displays a table of all properties owned by the user.
-- **CRUD Operations:**
-    - **Create:** Users can add new properties with details like name and address.
-    - **Read:** View a list of all properties.
-    - **Update:** Edit existing property details.
-    - **Delete:** Remove properties from the system.
-- **Search:** Users can search for properties by name.
-- **Navigation:** Links to view tenants for a specific property.
+## Current Plan
 
-#### 4. Tenant Management (`/tenants`)
-- **Tenant List:** Displays a table of all tenants. Can be filtered by property.
-- **CRUD Operations:**
-    - **Create:** Add new tenants and associate them with a property.
-    - **Read:** View a list of all tenants or tenants for a specific property.
-    - **Update:** Edit tenant details.
-    - **Delete:** Remove tenants from the system.
-- **Search:** Users can search for tenants by name.
+**Objective:** Finalize production deployment and polish core features.
 
-#### 5. Payment Management (`/payments`)
-- **Payment Records:** Displays a table of all recorded payments.
-- **CRUD Operations:**
-    - **Create:** Record new payments from tenants, specifying the amount, date, and type.
-    - **Read:** View a history of all payments.
-    - **Update:** Edit payment details.
-    - **Delete:** Remove payment records.
-- **Search:** Users can search payments by tenant or property name.
-- **Receipts:** Generate and view receipts for each payment.
+**Steps:**
 
-#### 6. Automated Notifications
-- **Overdue Balances:** A Vercel Cron Job runs daily to check for tenants with overdue balances.
-- **Push Notifications:** If overdue balances are found, the system sends a push notification to the landlord via Firebase Cloud Messaging.
-
-#### 7. UI & Navigation
-- **Dual Navigation System:**
-    - **Desktop:** A persistent side navigation bar for larger screens.
-    - **Mobile:** A touch-friendly bottom navigation bar for smaller screens.
-- **Header & Breadcrumbs:** A dynamic header displays the title of the current page and provides breadcrumb navigation.
-- **UI Components:** Utilizes `shadcn/ui` for a consistent and modern look and feel.
-- **Notifications:** Uses `sonner` to provide user-friendly toast notifications.
-- **Responsive Layout:** The entire application is designed to be responsive and work seamlessly on both desktop and mobile devices.
-
-#### 8. Progressive Web App (PWA)
-- **Installable:** Users can install the application on their home screen for easy access.
-- **Offline Access:** The application caches assets for offline use, ensuring a reliable experience even with a poor connection.
-- **Native-like Experience:** Provides a full-screen, standalone experience that feels like a native app.
-
+1.  **DONE:** Rewrite `components/auth/user-auth-form.tsx` using Shadcn Form (`react-hook-form` + `zod`).
+2.  **DONE:** Implement toggle between "Login" and "Sign Up" modes within the form.
+3.  **DONE:** Integrate with Firebase Authentication (`signInWithEmailAndPassword`, `createUserWithEmailAndPassword`).
+4.  **DONE:** Dashboard UI Polish (Removed "Karibu" title on mobile, updated button labels).
+5.  **DONE:** Fix "Missing or insufficient permissions" error in Tenant creation.
+6.  **DONE:** Fix Next.js 15 `useParams` Promise awaiting issues.
+7.  **DONE:** Production Build & Vercel Deployment configuration (Environment Variables, ESLint rules).

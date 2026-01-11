@@ -2,170 +2,250 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, query, where, getDocs, doc, updateDoc, increment, orderBy, limit, getDoc } from 'firebase/firestore';
 import { useAuth } from '@/app/AuthProvider';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, doc, getDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Combobox } from '@/components/ui/combobox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon } from 'lucide-react';
+import { format, getYear } from 'date-fns';
 import { toast } from 'sonner';
+import { Tenant } from '@/lib/types';
+import { paymentSchema, PaymentInput } from '@/lib/schemas';
+import { ZodError } from 'zod';
+import { Badge } from '@/components/ui/badge';
+import { Toggle } from '@/components/ui/toggle';
 
-interface Tenant {
-    id: string;
-    name: string;
-    propertyName: string;
-    unitName: string;
-    balance: number;
-    userId: string;
-    propertyId: string;
-}
-
-async function getNextReceiptNumber(userId: string) {
-  const paymentsQuery = query(
-    collection(db, 'payments'), 
-    where('userId', '==', userId), 
-    orderBy('receiptNumber', 'desc'), 
-    limit(1)
-  );
-  const snapshot = await getDocs(paymentsQuery);
-  if (snapshot.empty) {
-    return 1; // Start from 1 if no payments exist
-  }
-  const lastPayment = snapshot.docs[0].data();
-  return lastPayment.receiptNumber + 1;
-}
+const months = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
 
 export default function AddPaymentPage() {
   const router = useRouter();
   const { user } = useAuth();
-  
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const [amount, setAmount] = useState('');
-  const [paymentType, setPaymentType] = useState('Rent');
-  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [type, setType] = useState('Rent');
+  const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const fetchTenants = async () => {
-      if (user) {
+    if (user) {
+      const fetchTenants = async () => {
         const q = query(collection(db, 'tenants'), where('userId', '==', user.uid));
-        const snapshot = await getDocs(q);
-        const tenantsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Tenant[];
+        const querySnapshot = await getDocs(q);
+        const tenantsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tenant));
         setTenants(tenantsData);
-      }
-    };
-    fetchTenants();
+      };
+      fetchTenants();
+    }
   }, [user]);
 
   const handleTenantChange = (tenantId: string) => {
-    const tenant = tenants.find(t => t.id === tenantId);
-    setSelectedTenant(tenant || null);
+    const tenant = tenants.find(t => t.id === tenantId) || null;
+    setSelectedTenant(tenant);
+  };
+
+  const handleMonthToggle = (month: string) => {
+    setSelectedMonths(prev =>
+      prev.includes(month) ? prev.filter(m => m !== month) : [...prev, month]
+    );
+  };
+
+  const selectCurrentMonth = () => {
+    if (date) {
+      const currentMonthName = format(date, 'MMMM');
+      const currentYear = getYear(date);
+      const monthWithYear = `${currentMonthName} ${currentYear}`;
+      if (!selectedMonths.includes(monthWithYear)) {
+        setSelectedMonths([monthWithYear]);
+      }
+    }
+  };
+
+  const clearMonths = () => {
+    setSelectedMonths([]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!user || !selectedTenant || !amount) {
-      toast.error('Please fill in all required fields.');
+    if (!user || !selectedTenant || !date) {
+      toast.error('Please fill out all required fields.');
       return;
     }
 
-    try {
-      const paymentAmount = parseFloat(amount);
-      const receiptNumber = await getNextReceiptNumber(user.uid);
+    setLoading(true);
 
-      // Get the latest tenant data before calculating the new balance
-      const tenantRef = doc(db, 'tenants', selectedTenant.id);
-      const tenantSnap = await getDoc(tenantRef);
-      const currentTenantData = tenantSnap.data();
-      const currentBalance = currentTenantData?.balance || 0;
-      const balanceAfterPayment = currentBalance - paymentAmount;
-      
-      // 1. Add payment record with the new balance
-      await addDoc(collection(db, 'payments'), {
+    try {
+      const tenantDocRef = doc(db, 'tenants', selectedTenant.id);
+      const tenantDocSnap = await getDoc(tenantDocRef);
+      if (!tenantDocSnap.exists()) {
+        throw new Error('Selected tenant no longer exists.');
+      }
+      const currentTenantData = tenantDocSnap.data() as Tenant;
+
+      const propertyDocRef = doc(db, 'properties', currentTenantData.propertyId);
+      const propertyDocSnap = await getDoc(propertyDocRef);
+      if (!propertyDocSnap.exists()) {
+        throw new Error('Property associated with tenant not found.');
+      }
+      const propertyData = propertyDocSnap.data();
+
+      const payload: PaymentInput = {
+        amount: parseFloat(amount),
+        date,
+        type,
+        months: selectedMonths,
         userId: user.uid,
         tenantId: selectedTenant.id,
-        propertyId: selectedTenant.propertyId,
-        amount: paymentAmount,
-        type: paymentType,
-        date: new Date(paymentDate),
-        createdAt: new Date(),
-        receiptNumber,
-        balanceAfterPayment, // Save the calculated balance
-      });
+        propertyId: currentTenantData.propertyId,
+        tenantName: currentTenantData.name,
+        propertyName: propertyData.name,
+        unitName: currentTenantData.unitName || 'N/A',
+      };
 
-      // 2. Update tenant's balance
-      await updateDoc(tenantRef, {
-        balance: increment(-paymentAmount)
+      paymentSchema.parse(payload);
+
+      await addDoc(collection(db, 'payments'), {
+        ...payload,
+        createdAt: serverTimestamp(),
       });
 
       toast.success('Payment recorded successfully!');
       router.push('/payments');
+
     } catch (error) {
-      console.error("Error recording payment: ", error);
-      toast.error('Failed to record payment. Please try again.');
+      if (error instanceof ZodError) {
+        const errorMessage = error.errors.map(e => e.message).join('\n');
+        toast.error(errorMessage);
+      } else if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error('An unexpected error occurred.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
   
-  const tenantOptions = tenants.map(tenant => ({
-    value: tenant.id,
-    label: `${tenant.name} (${tenant.propertyName} - ${tenant.unitName})`,
-  }));
+  const currentYear = getYear(date || new Date());
 
   return (
     <div className="container mx-auto py-10">
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader>
-          <CardTitle>Record New Payment</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-                <label htmlFor="tenant" className="font-semibold">Tenant</label>
-                <Combobox
-                    data-testid="tenant-combobox"
-                    options={tenantOptions}
-                    value={selectedTenant ? selectedTenant.id : ''}
-                    onChange={handleTenantChange}
-                    placeholder="Select a tenant"
-                    searchPlaceholder="Search tenants..."
-                    emptyText="No tenants found."
-                />
-            </div>
+      <h1 className="text-3xl font-bold mb-6">Record a New Payment</h1>
+      <form onSubmit={handleSubmit} className="max-w-lg mx-auto space-y-6">
+        <div className="space-y-2">
+          <label htmlFor="tenant" className="text-sm font-medium">Tenant</label>
+          <Select onValueChange={handleTenantChange} required>
+            <SelectTrigger id="tenant">
+              <SelectValue placeholder="Select a tenant" />
+            </SelectTrigger>
+            <SelectContent>
+              {tenants.map(tenant => (
+                <SelectItem key={tenant.id} value={tenant.id}>
+                  {tenant.name} ({tenant.propertyName})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-            <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <label htmlFor="amount" className="font-semibold">Amount</label>
-                    <Input id="amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g., 1000.00" required />
+        <div className="space-y-2">
+          <label htmlFor="amount" className="text-sm font-medium">Amount (UGX)</label>
+          <Input
+            id="amount"
+            type="number"
+            value={amount}
+            onChange={e => setAmount(e.target.value)}
+            placeholder="e.g., 500000"
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="date" className="text-sm font-medium">Payment Date</label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className="w-full justify-start text-left font-normal"
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {date ? format(date, "PPP") : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={setDate}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="type" className="text-sm font-medium">Payment Type</label>
+          <Select value={type} onValueChange={setType} required>
+            <SelectTrigger id="type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Rent">Rent</SelectItem>
+              <SelectItem value="Security">Security</SelectItem>
+              <SelectItem value="Utilities">Utilities</SelectItem>
+              <SelectItem value="Other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-4 rounded-lg border p-4 shadow-sm">
+          <h3 className="text-lg font-medium">For Months</h3>
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+            {months.map(month => {
+              const monthWithYear = `${month} ${currentYear}`;
+              return (
+                <Toggle
+                  key={monthWithYear}
+                  pressed={selectedMonths.includes(monthWithYear)}
+                  onPressedChange={() => handleMonthToggle(monthWithYear)}
+                  variant="outline"
+                  className="flex-grow text-center"
+                >
+                  {month}
+                </Toggle>
+              );
+            })}
+          </div>
+          <div className="flex items-center space-x-2 pt-2">
+            <Button type="button" size="sm" variant="outline" onClick={selectCurrentMonth} className="flex-grow">
+              Select Current Month
+            </Button>
+            <Button type="button" size="sm" variant="destructive" onClick={clearMonths} className="flex-grow">
+              Clear All
+            </Button>
+          </div>
+          {selectedMonths.length > 0 && (
+            <div className="pt-2">
+                <p className='text-sm text-muted-foreground'>Selected:</p>
+                <div className="flex flex-wrap gap-2 mt-2">
+                    {selectedMonths.map(m => <Badge key={m}>{m}</Badge>)}
                 </div>
-                <div className="space-y-2">
-                    <label htmlFor="payment-type" className="font-semibold">Payment Type</label>
-                    <Select value={paymentType} onValueChange={setPaymentType}>
-                        <SelectTrigger>
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="Rent">Rent</SelectItem>
-                            <SelectItem value="Deposit">Security Deposit</SelectItem>
-                            <SelectItem value="Other">Other</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
             </div>
+          )}
+        </div>
 
-            <div className="space-y-2">
-                <label htmlFor="payment-date" className="font-semibold">Payment Date</label>
-                <Input id="payment-date" type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} required />
-            </div>
-
-            <div className="flex justify-end pt-4">
-              <Button type="submit">Record Payment</Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? 'Recording...' : 'Record Payment'}
+        </Button>
+      </form>
     </div>
   );
 }

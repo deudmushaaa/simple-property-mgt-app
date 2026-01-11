@@ -3,7 +3,7 @@
 import { useEffect, useState, FormEvent } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, doc, getDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/app/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { toast } from 'sonner';
-import { Payment, Tenant } from '@/lib/types';
+import { Payment, Tenant, Property } from '@/lib/types';
 
 export default function PaymentsPage() {
   const { user } = useAuth();
@@ -27,35 +27,48 @@ export default function PaymentsPage() {
 
   useEffect(() => {
     if (user) {
-      const fetchPayments = async () => {
-        const paymentsQuery = query(collection(db, 'payments'), where('userId', '==', user.uid));
-        const paymentsSnapshot = await getDocs(paymentsQuery);
-        const paymentsData = await Promise.all(paymentsSnapshot.docs.map(async (paymentDoc) => {
-          const paymentData = paymentDoc.data();
-          
-          let tenantName = 'N/A';
-          let propertyId = paymentData.propertyId;
-          if (paymentData.tenantId) {
-            const tenantDocRef = doc(db, 'tenants', paymentData.tenantId);
-            const tenantDocSnap = await getDoc(tenantDocRef);
-            if (tenantDocSnap.exists()) {
-              const tenantData = tenantDocSnap.data() as Tenant;
-              tenantName = tenantData.name;
-              if (!propertyId && tenantData.propertyId) propertyId = tenantData.propertyId;
-            }
-          }
-          
-          let propertyName = 'N/A';
-          if (propertyId) {
-            const propertyDocRef = doc(db, 'properties', propertyId);
-            const propertyDocSnap = await getDoc(propertyDocRef);
-            propertyName = propertyDocSnap.exists() ? propertyDocSnap.data().name : 'N/A';
-          }
+        const fetchPayments = async () => {
+            try {
+              const paymentsQuery = query(collection(db, 'payments'), where('userId', '==', user.uid));
+              const tenantsQuery = query(collection(db, 'tenants'), where('userId', '==', user.uid));
+              const propertiesQuery = query(collection(db, 'properties'), where('userId', '==', user.uid));
 
-          return { ...paymentData, id: paymentDoc.id, tenantName, propertyName } as Payment;
-        }));
-        setPayments(paymentsData);
-      };
+              const [paymentsSnapshot, tenantsSnapshot, propertiesSnapshot] = await Promise.all([
+                getDocs(paymentsQuery),
+                getDocs(tenantsQuery),
+                getDocs(propertiesQuery),
+              ]);
+
+              const tenantsData = tenantsSnapshot.docs.reduce((acc, doc) => {
+                acc[doc.id] = doc.data() as Tenant;
+                return acc;
+              }, {} as { [key: string]: Tenant });
+
+              const propertiesData = propertiesSnapshot.docs.reduce((acc, doc) => {
+                acc[doc.id] = doc.data() as Property;
+                return acc;
+              }, {} as { [key: string]: Property });
+
+              const paymentsData = paymentsSnapshot.docs.map((paymentDoc) => {
+                const data = paymentDoc.data();
+                const tenant = tenantsData[data.tenantId];
+                const property = propertiesData[data.propertyId];
+                
+                return { 
+                  ...data, 
+                  id: paymentDoc.id,
+                  tenantName: tenant?.name || 'N/A', 
+                  propertyName: property?.name || 'N/A',
+                  date: data.date instanceof Timestamp ? data.date.toDate() : new Date(data.date)
+                } as Payment;
+              });
+          
+              setPayments(paymentsData);
+            } catch (error) {
+              console.error("Permission Error during fetch:", error);
+              toast.error("Could not load payments. Check your permissions.");
+            }
+          };
       fetchPayments();
     }
   }, [user]);
@@ -77,6 +90,16 @@ export default function PaymentsPage() {
     (payment.tenantName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (payment.propertyName || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const toDate = (date: any) => {
+    if (date instanceof Date) {
+      return date;
+    }
+    if (date && date.toDate) { // Handle Firestore Timestamp
+      return date.toDate();
+    }
+    return new Date(); // Fallback for unexpected types
+  };
 
   return (
     <div className="container mx-auto py-10">
@@ -109,10 +132,10 @@ export default function PaymentsPage() {
           <TableBody>
             {filteredPayments.map(payment => (
               <TableRow key={payment.id}>
-                <TableCell>{payment.date.toDate().toLocaleDateString()}</TableCell>
+                <TableCell>{toDate(payment.date).toLocaleDateString()}</TableCell>
                 <TableCell>{payment.tenantName}</TableCell>
                 <TableCell>{payment.propertyName}</TableCell>
-                <TableCell>${payment.amount.toLocaleString()}</TableCell>
+                <TableCell>UGX {payment.amount.toLocaleString()}</TableCell>
                 <TableCell>{payment.type}</TableCell>
                 <TableCell className="text-right">
                     <DropdownMenu>

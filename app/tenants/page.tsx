@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { toast } from 'sonner';
-import { Tenant } from '@/lib/types';
+import { Tenant, Property } from '@/lib/types';
 
 export default function TenantsPage() {
   const { user } = useAuth();
@@ -50,32 +50,25 @@ export default function TenantsPage() {
           setPageTitle('All Tenants');
         }
 
-        const tenantsSnapshot = await getDocs(tenantsQuery);
-        const tenantsData = await Promise.all(tenantsSnapshot.docs.map(async (tenantDoc) => {
-          const tenantData = tenantDoc.data();
-          let propertyName = 'N/A';
-          if (tenantData.propertyId) {
-              const propDoc = await getDoc(doc(db, 'properties', tenantData.propertyId));
-              if (propDoc.exists()) {
-                  propertyName = propDoc.data().name;
-              }
-          }
-          let unitName = 'N/A';
-          if (tenantData.unitId) {
-            const unitDoc = await getDoc(doc(db, 'units', tenantData.unitId));
-            if (unitDoc.exists()) {
-                unitName = unitDoc.data().name;
+        const [tenantsSnapshot, propertiesSnapshot] = await Promise.all([
+          getDocs(tenantsQuery),
+          getDocs(query(collection(db, 'properties'), where('userId', '==', user.uid)))
+        ]);
+
+        const propertiesData = propertiesSnapshot.docs.reduce((acc, doc) => {
+          acc[doc.id] = doc.data() as Property;
+          return acc;
+        }, {} as { [key: string]: Property });
+
+        const tenantsData = tenantsSnapshot.docs.map(doc => {
+            const tenantData = doc.data() as Tenant;
+            const property = propertiesData[tenantData.propertyId!];
+            return {
+                ...tenantData,
+                id: doc.id,
+                propertyName: property ? property.name : 'N/A',
             }
-          }
-          return {
-            id: tenantDoc.id,
-            name: tenantData.name,
-            email: tenantData.email,
-            phone: tenantData.phone,
-            propertyName,
-            unitName,
-          } as Tenant;
-      }));
+        });
         setTenants(tenantsData);
       };
       fetchTenants();
@@ -172,7 +165,7 @@ export default function TenantsPage() {
               <TableBody>
                 {filteredTenants.map(tenant => (
                   <TableRow key={tenant.id}>
-                    <TableCell className="font-.medium">{tenant.name}</TableCell>
+                    <TableCell className="font-medium">{tenant.name}</TableCell>
                     <TableCell>{tenant.propertyName ?? 'N/A'}</TableCell>
                     <TableCell>{tenant.unitName ?? 'N/A'}</TableCell>
                     <TableCell>{tenant.email}</TableCell>

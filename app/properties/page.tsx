@@ -4,7 +4,9 @@ import { useState, useEffect, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/AuthProvider';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import {
+  collection, query, where, getDocs, deleteDoc, doc, writeBatch
+} from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -34,24 +36,48 @@ export default function PropertiesPage() {
     e.preventDefault();
   };
 
-  const deleteProperty = async (propertyId: string) => {
-    if (confirm('Are you sure you want to delete this property and all associated data?')) {
-      try {
-        const tenantsQuery = query(collection(db, 'tenants'), where('propertyId', '==', propertyId));
-        const tenantsSnapshot = await getDocs(tenantsQuery);
-        const deletePromises: Promise<void>[] = [];
-        tenantsSnapshot.forEach(doc => {
-          deletePromises.push(deleteDoc(doc.ref));
-        });
-        await Promise.all(deletePromises);
+ const deleteProperty = async (propertyId: string) => {
+    if (!confirm('Are you sure you want to PERMANENTLY delete this property, including all its tenants and their payment histories? This action cannot be undone.')) {
+      return;
+    }
 
-        await deleteDoc(doc(db, 'properties', propertyId));
-        setProperties(properties.filter(p => p.id !== propertyId));
-        toast.success('Property and all related data deleted successfully.');
-      } catch (error) {
-        console.error('Error deleting property: ', error);
-        toast.error('Failed to delete property.');
+    try {
+      const batch = writeBatch(db);
+
+      // 1. Find all tenants of the property
+      const tenantsQuery = query(collection(db, 'tenants'), where('propertyId', '==', propertyId));
+      const tenantsSnapshot = await getDocs(tenantsQuery);
+      
+      const tenantIds = tenantsSnapshot.docs.map(d => d.id);
+
+      if (tenantIds.length > 0) {
+        // 2. For each tenant, find and delete all their payments
+        const paymentsQuery = query(collection(db, 'payments'), where('tenantId', 'in', tenantIds));
+        const paymentsSnapshot = await getDocs(paymentsQuery);
+        paymentsSnapshot.forEach(paymentDoc => {
+          batch.delete(paymentDoc.ref);
+        });
+
+        // 3. Delete all the tenants
+        tenantsSnapshot.forEach(tenantDoc => {
+          batch.delete(tenantDoc.ref);
+        });
       }
+
+      // 4. Finally, delete the property itself
+      const propertyRef = doc(db, 'properties', propertyId);
+      batch.delete(propertyRef);
+
+      // Commit the batch operation
+      await batch.commit();
+
+      // Update UI
+      setProperties(properties.filter(p => p.id !== propertyId));
+      toast.success('Property and all related data deleted successfully.');
+
+    } catch (error: any) {
+      console.error('Error deleting property: ', error);
+      toast.error(`Failed to delete property. ${error.message}`);
     }
   };
 
