@@ -15,7 +15,16 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-export const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+
+if (typeof window !== 'undefined' && !firebaseConfig.apiKey) {
+  console.error(
+    'Firebase initialization error: Missing NEXT_PUBLIC_FIREBASE_API_KEY. ' +
+    'Ensure you have added all environment variables to Vercel with the NEXT_PUBLIC_ prefix.'
+  );
+}
+
+export { app };
 
 // Initialize services
 export const db = getFirestore(app);
