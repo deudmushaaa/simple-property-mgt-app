@@ -15,6 +15,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({ user: null, loading: true });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [user, loading, error] = useAuthState(auth);
+
   // fast-fail if config is missing
   if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
     return (
@@ -28,8 +30,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       </div>
     );
   }
-
-  const [user, loading, error] = useAuthState(auth);
 
   if (loading) {
     return (
