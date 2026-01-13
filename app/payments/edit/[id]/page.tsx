@@ -13,16 +13,16 @@ import { toast } from 'sonner';
 import { Combobox } from '@/components/ui/combobox';
 
 interface Tenant {
-    id: string;
-    name: string;
-    propertyName: string;
-    unitName: string;
+  id: string;
+  name: string;
+  propertyName: string;
+  unitName: string;
 }
 
 export default function EditPaymentPage() {
   const router = useRouter();
   const params = useParams();
-  const id = Array.isArray(params.id) ? params.id[0] : params.id;
+  const id = params?.id ? (Array.isArray(params.id) ? params.id[0] : params.id) : null;
   const { user } = useAuth();
 
   const [date, setDate] = useState('');
@@ -55,14 +55,14 @@ export default function EditPaymentPage() {
         const tenantsQuery = query(collection(db, 'tenants'), where('userId', '==', user.uid));
         const tenantsSnapshot = await getDocs(tenantsQuery);
         const tenantsList = await Promise.all(tenantsSnapshot.docs.map(async (tenantDoc) => {
-            const tenantData = tenantDoc.data();
-            const propertyDoc = await getDoc(doc(db, 'properties', tenantData.propertyId));
-            const propertyName = propertyDoc.exists() ? propertyDoc.data().name : 'N/A';
-            return { 
-                id: tenantDoc.id, 
-                ...tenantData,
-                propertyName
-            } as Tenant;
+          const tenantData = tenantDoc.data();
+          const propertyDoc = await getDoc(doc(db, 'properties', tenantData.propertyId));
+          const propertyName = propertyDoc.exists() ? propertyDoc.data().name : 'N/A';
+          return {
+            id: tenantDoc.id,
+            ...tenantData,
+            propertyName
+          } as Tenant;
         }));
         setTenants(tenantsList);
         setLoading(false);
@@ -122,15 +122,15 @@ export default function EditPaymentPage() {
               <Input id="amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} required />
             </div>
             <div className="space-y-2">
-                <label>Tenant</label>
-                <Combobox
-                    options={tenantOptions}
-                    value={tenantId}
-                    onChange={setTenantId}
-                    placeholder="Select tenant..."
-                    searchPlaceholder="Search tenants..."
-                    emptyText="No tenants found."
-                />
+              <label>Tenant</label>
+              <Combobox
+                options={tenantOptions}
+                value={tenantId}
+                onChange={setTenantId}
+                placeholder="Select tenant..."
+                searchPlaceholder="Search tenants..."
+                emptyText="No tenants found."
+              />
             </div>
             <div className="space-y-2">
               <label htmlFor="type">Payment Type</label>

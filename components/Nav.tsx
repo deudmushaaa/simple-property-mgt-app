@@ -26,11 +26,10 @@ export function Nav() {
                 <TooltipTrigger asChild>
                   <Link
                     href={link.href}
-                    className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors md:h-8 md:w-8 ${
-                      pathname.startsWith(link.href)
+                    className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors md:h-8 md:w-8 ${pathname?.startsWith(link.href)
                         ? "bg-accent text-accent-foreground"
                         : "text-muted-foreground hover:text-foreground"
-                    }`}
+                      }`}
                   >
                     <link.icon className="h-5 w-5" />
                     <span className="sr-only">{link.label}</span>
@@ -50,11 +49,10 @@ export function Nav() {
             <Link
               key={link.href}
               href={link.href}
-              className={`flex flex-col items-center gap-1 py-2 px-3 text-xs ${
-                pathname.startsWith(link.href) 
-                  ? "text-primary" 
+              className={`flex flex-col items-center gap-1 py-2 px-3 text-xs ${pathname?.startsWith(link.href)
+                  ? "text-primary"
                   : "text-muted-foreground"
-              }`}
+                }`}
             >
               <link.icon className="h-5 w-5" />
               {link.label}

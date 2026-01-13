@@ -43,15 +43,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const propertyRef = db.collection('properties').doc(propertyId);
 
     const [tenantDoc, propertyDoc] = await Promise.all([
-        tenantRef.get(),
-        propertyRef.get(),
+      tenantRef.get(),
+      propertyRef.get(),
     ]);
 
-    if (!tenantDoc.exists()) {
-        return res.status(404).json({ message: 'Tenant not found' });
+    if (!tenantDoc.exists) {
+      return res.status(404).json({ message: 'Tenant not found' });
     }
-    if (!propertyDoc.exists()) {
-        return res.status(404).json({ message: 'Property not found' });
+    if (!propertyDoc.exists) {
+      return res.status(404).json({ message: 'Property not found' });
     }
 
     const tenantName = tenantDoc.data()?.name || 'N/A';

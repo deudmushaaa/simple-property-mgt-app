@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Search, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Property } from '@/lib/types';
 
@@ -36,27 +36,43 @@ export default function PropertiesPage() {
     e.preventDefault();
   };
 
- const deleteProperty = async (propertyId: string) => {
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const deleteProperty = async (propertyId: string) => {
+    if (!user) return;
     if (!confirm('Are you sure you want to PERMANENTLY delete this property, including all its tenants and their payment histories? This action cannot be undone.')) {
       return;
     }
 
+    setDeletingId(propertyId);
     try {
-      const batch = writeBatch(db);
-
-      // 1. Find all tenants of the property
-      const tenantsQuery = query(collection(db, 'tenants'), where('propertyId', '==', propertyId));
+      // 1. Find all tenants of the property specifically for this user
+      const tenantsQuery = query(
+        collection(db, 'tenants'),
+        where('propertyId', '==', propertyId),
+        where('userId', '==', user.uid)
+      );
       const tenantsSnapshot = await getDocs(tenantsQuery);
-      
       const tenantIds = tenantsSnapshot.docs.map(d => d.id);
 
+      const batch = writeBatch(db);
+
+      // 2. Cascade delete payments (handling chunked 'in' queries for > 30 tenants)
       if (tenantIds.length > 0) {
-        // 2. For each tenant, find and delete all their payments
-        const paymentsQuery = query(collection(db, 'payments'), where('tenantId', 'in', tenantIds));
-        const paymentsSnapshot = await getDocs(paymentsQuery);
-        paymentsSnapshot.forEach(paymentDoc => {
-          batch.delete(paymentDoc.ref);
-        });
+        // Firestore 'in' query limit is 30. We loop in chunks of 30.
+        for (let i = 0; i < tenantIds.length; i += 30) {
+          const chunk = tenantIds.slice(i, i + 30);
+          const paymentsQuery = query(
+            collection(db, 'payments'),
+            where('tenantId', 'in', chunk),
+            where('userId', '==', user.uid)
+          );
+          const paymentsSnapshot = await getDocs(paymentsQuery);
+
+          paymentsSnapshot.forEach(paymentDoc => {
+            batch.delete(paymentDoc.ref);
+          });
+        }
 
         // 3. Delete all the tenants
         tenantsSnapshot.forEach(tenantDoc => {
@@ -72,12 +88,14 @@ export default function PropertiesPage() {
       await batch.commit();
 
       // Update UI
-      setProperties(properties.filter(p => p.id !== propertyId));
+      setProperties(prev => prev.filter(p => p.id !== propertyId));
       toast.success('Property and all related data deleted successfully.');
 
     } catch (error: any) {
       console.error('Error deleting property: ', error);
       toast.error(`Failed to delete property. ${error.message}`);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -118,11 +136,26 @@ export default function PropertiesPage() {
                 <TableCell className="font-medium">{property.name}</TableCell>
                 <TableCell>{property.address}</TableCell>
                 <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" onClick={() => router.push(`/properties/edit/${property.id}`)}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => router.push(`/properties/edit/${property.id}`)}
+                    disabled={!!deletingId}
+                  >
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => deleteProperty(property.id)}>
-                    <Trash2 className="h-4 w-4" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => deleteProperty(property.id)}
+                    disabled={!!deletingId}
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    {deletingId === property.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
                   </Button>
                 </TableCell>
               </TableRow>

@@ -90,6 +90,10 @@ export default function AddPaymentPage() {
       }
       const currentTenantData = tenantDocSnap.data() as Tenant;
 
+      if (!currentTenantData.propertyId) {
+        throw new Error('Tenant does not have an associated property.');
+      }
+
       const propertyDocRef = doc(db, 'properties', currentTenantData.propertyId);
       const propertyDocSnap = await getDoc(propertyDocRef);
       if (!propertyDocSnap.exists()) {
@@ -122,7 +126,7 @@ export default function AddPaymentPage() {
 
     } catch (error) {
       if (error instanceof ZodError) {
-        const errorMessage = error.errors.map(e => e.message).join('\n');
+        const errorMessage = error.issues.map((e: any) => e.message).join('\n');
         toast.error(errorMessage);
       } else if (error instanceof Error) {
         toast.error(error.message);
@@ -133,7 +137,7 @@ export default function AddPaymentPage() {
       setLoading(false);
     }
   };
-  
+
   const currentYear = getYear(date || new Date());
 
   return (
@@ -234,10 +238,10 @@ export default function AddPaymentPage() {
           </div>
           {selectedMonths.length > 0 && (
             <div className="pt-2">
-                <p className='text-sm text-muted-foreground'>Selected:</p>
-                <div className="flex flex-wrap gap-2 mt-2">
-                    {selectedMonths.map(m => <Badge key={m}>{m}</Badge>)}
-                </div>
+              <p className='text-sm text-muted-foreground'>Selected:</p>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {selectedMonths.map(m => <Badge key={m}>{m}</Badge>)}
+              </div>
             </div>
           )}
         </div>

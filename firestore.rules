@@ -31,10 +31,10 @@ service cloud.firestore {
 
     // Payments belong to a property
     match /payments/{paymentId} {
-       // To create a payment, you must own the property it belongs to
-      allow create: if request.auth != null && get(/databases/$(database)/documents/properties/$(request.resource.data.propertyId)).data.userId == request.auth.uid;
-      // To manage a payment, you must own the property it belongs to
-      allow read, update, delete: if request.auth != null && get(/databases/$(database)/documents/properties/$(resource.data.propertyId)).data.userId == request.auth.uid;
+      // Allow create if the user is authenticated and is the one recording it
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      // Allow read, update, delete if the user is the owner (recorded the payment)
+      allow read, update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
   }
 }

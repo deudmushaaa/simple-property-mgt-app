@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const paymentSchema = z.object({
   // Core Payment Details
   amount: z.coerce.number().positive({ message: "Amount must be a positive number." }),
-  date: z.date({ required_error: "Payment date is required." }),
+  date: z.date(),
   type: z.string().min(1, "Payment type is required."),
   months: z.array(z.string()).min(1, "Please select at least one month."),
 
@@ -19,3 +19,27 @@ export const paymentSchema = z.object({
 });
 
 export type PaymentInput = z.infer<typeof paymentSchema>;
+
+export const propertySchema = z.object({
+  userId: z.string().min(1),
+  name: z.string().min(1, "Property name is required."),
+  address: z.string().min(1, "Address is required."),
+  units: z.array(z.object({
+    name: z.string().min(1)
+  })).min(1, "At least one unit is required."),
+  createdAt: z.date().optional()
+});
+
+export type PropertyInput = z.infer<typeof propertySchema>;
+
+export const tenantSchema = z.object({
+  userId: z.string().min(1),
+  name: z.string().min(1, "Tenant name is required."),
+  phone: z.string().length(10, "Phone number must be exactly 10 digits."),
+  dueDay: z.number().min(1).max(31),
+  propertyId: z.string().min(1, "Property selection is required."),
+  unitName: z.string().min(1, "Unit selection is required."),
+  propertyName: z.string().min(1, "Property name is required.")
+});
+
+export type TenantInput = z.infer<typeof tenantSchema>;
