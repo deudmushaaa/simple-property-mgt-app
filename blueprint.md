@@ -34,3 +34,8 @@ Karibu is a comprehensive SaaS platform designed for property managers and landl
 5.  **DONE:** Fix "Missing or insufficient permissions" error in Tenant creation.
 6.  **DONE:** Fix Next.js 15 `useParams` Promise awaiting issues.
 7.  **DONE:** Production Build & Vercel Deployment configuration (Environment Variables, ESLint rules).
+37.  **DONE:** Implement "Rent Due Date" tracking system (DB update, UI for Add/Edit Tenant, Dashboard Overdue logic).
+38.  **DONE:** Simplify Dashboard (Removed unnecessary stats, added UGX currency, Interactive Vacant Units).
+39.  **DONE:** Implement Monthly Financial Reports (PDF generation via `@react-pdf/renderer`, interactive reports page with monthly filtering).
+40.  **DONE:** Production Readiness & Robustness (Global Error Boundaries, Zod validation for all forms, Loading states for all submissions, Fixed legacy bugs in Edit pages).
+41.  **DONE:** Production Deployment & PWA (Generated professional app icons, configured manifest.json, added iOS meta tags, and verified mobile install capability).

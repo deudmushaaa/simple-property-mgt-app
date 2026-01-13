@@ -4,7 +4,7 @@ import { useEffect, useState, FormEvent } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, doc, getDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { useAuth } from '@/app/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,7 +25,7 @@ import { Tenant, Property } from '@/lib/types';
 export default function TenantsPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
-  const propertyId = searchParams.get('propertyId');
+  const propertyId = searchParams?.get('propertyId');
 
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [pageTitle, setPageTitle] = useState('Tenants');
@@ -61,13 +61,13 @@ export default function TenantsPage() {
         }, {} as { [key: string]: Property });
 
         const tenantsData = tenantsSnapshot.docs.map(doc => {
-            const tenantData = doc.data() as Tenant;
-            const property = propertiesData[tenantData.propertyId!];
-            return {
-                ...tenantData,
-                id: doc.id,
-                propertyName: property ? property.name : 'N/A',
-            }
+          const tenantData = doc.data() as Tenant;
+          const property = propertiesData[tenantData.propertyId!];
+          return {
+            ...tenantData,
+            id: doc.id,
+            propertyName: property ? property.name : 'N/A',
+          }
         });
         setTenants(tenantsData);
       };
@@ -75,16 +75,40 @@ export default function TenantsPage() {
     }
   }, [user, propertyId]);
 
-  const handleDelete = async (tenantId: string) => {
-    if (!confirm('Are you sure you want to delete this tenant?')) return;
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  const handleDelete = async (tenantId: string) => {
+    if (!user) return;
+    if (!confirm('Are you sure you want to delete this tenant and all their payment history?')) return;
+
+    setDeletingId(tenantId);
     try {
-      await deleteDoc(doc(db, 'tenants', tenantId));
-      toast.success('Tenant deleted successfully!');
+      const batch = writeBatch(db);
+
+      // 1. Find all payments for this tenant specifically for this user
+      const paymentsQuery = query(
+        collection(db, 'payments'),
+        where('tenantId', '==', tenantId),
+        where('userId', '==', user.uid)
+      );
+      const paymentsSnapshot = await getDocs(paymentsQuery);
+
+      paymentsSnapshot.forEach(paymentDoc => {
+        batch.delete(paymentDoc.ref);
+      });
+
+      // 2. Delete the tenant
+      batch.delete(doc(db, 'tenants', tenantId));
+
+      await batch.commit();
+
+      toast.success('Tenant and payment history deleted successfully!');
       setTenants(currentTenants => currentTenants.filter(t => t.id !== tenantId));
     } catch (error) {
       toast.error('Failed to delete tenant. Please try again.');
       console.error("Error deleting tenant: ", error);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -99,18 +123,18 @@ export default function TenantsPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">{pageTitle}</h1>
         <div className="flex items-center space-x-2">
-           <Input
-              placeholder="Search tenants..."
-              value={searchTerm}
-              onChange={(e: FormEvent<HTMLInputElement>) => setSearchTerm(e.currentTarget.value)}
-              className="max-w-sm hidden sm:block"
-            />
-            <Link href={addTenantLink}>
-              <Button>Add Tenant</Button>
-            </Link>
+          <Input
+            placeholder="Search tenants..."
+            value={searchTerm}
+            onChange={(e: FormEvent<HTMLInputElement>) => setSearchTerm(e.currentTarget.value)}
+            className="max-w-sm hidden sm:block"
+          />
+          <Link href={addTenantLink}>
+            <Button>Add Tenant</Button>
+          </Link>
         </div>
       </div>
-       <Input
+      <Input
         placeholder="Search tenants..."
         value={searchTerm}
         onChange={(e: FormEvent<HTMLInputElement>) => setSearchTerm(e.currentTarget.value)}
@@ -171,34 +195,34 @@ export default function TenantsPage() {
                     <TableCell>{tenant.email}</TableCell>
                     <TableCell>{tenant.phone ?? 'N/A'}</TableCell>
                     <TableCell className="text-right">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                    <span className="sr-only">Open menu</span>
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem asChild>
-                                    <Link href={`/tenants/${tenant.id}`}>
-                                        <Eye className="mr-2 h-4 w-4" />
-                                        View Details
-                                    </Link>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem asChild>
-                                    <Link href={`/tenants/edit/${tenant.id}`}>
-                                        <Pencil className="mr-2 h-4 w-4" />
-                                        Edit
-                                    </Link>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleDelete(tenant.id)} className="text-red-600">
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/tenants/${tenant.id}`}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Details
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem asChild>
+                            <Link href={`/tenants/edit/${tenant.id}`}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDelete(tenant.id)} className="text-red-600">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}

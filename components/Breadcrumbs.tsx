@@ -17,7 +17,7 @@ const breadcrumbNameMap: { [key: string]: string } = {
 
 export function Breadcrumbs() { // Renamed from Breadcrumbs to Breadcrumbs
   const pathname = usePathname();
-  const pathSegments = pathname.split('/').filter(segment => segment);
+  const pathSegments = pathname ? pathname.split('/').filter(segment => segment) : [];
 
   return (
     <nav className="hidden md:flex items-center space-x-2 text-sm text-muted-foreground">
@@ -29,8 +29,8 @@ export function Breadcrumbs() { // Renamed from Breadcrumbs to Breadcrumbs
         const isLast = index === pathSegments.length - 1;
         let name = breadcrumbNameMap[href] || segment.charAt(0).toUpperCase() + segment.slice(1);
 
-        if (pathSegments.length > 2 && (pathSegments[index-1] === 'edit' || pathSegments[index-1] === 'properties' || pathSegments[index-1] === 'tenants')) {
-            name = 'Details'
+        if (pathSegments.length > 2 && (pathSegments[index - 1] === 'edit' || pathSegments[index - 1] === 'properties' || pathSegments[index - 1] === 'tenants')) {
+          name = 'Details'
         }
 
         return (

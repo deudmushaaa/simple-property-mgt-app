@@ -9,7 +9,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { toast } from 'sonner';
+import { tenantSchema } from '@/lib/schemas';
+import { ZodError } from 'zod';
 
 // Define interfaces for type safety
 interface Property extends DocumentData {
@@ -28,8 +31,8 @@ export default function AddTenantPage() {
   const searchParams = useSearchParams();
 
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [dueDay, setDueDay] = useState<number>(1);
   const [propertyId, setPropertyId] = useState('');
   const [unitName, setUnitName] = useState('');
   const [properties, setProperties] = useState<Property[]>([]);
@@ -82,6 +85,8 @@ export default function AddTenantPage() {
     }
   }, [propertyId, user, fetchOccupiedUnits]);
 
+  const [loading, setLoading] = useState(false);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!user) {
@@ -89,33 +94,43 @@ export default function AddTenantPage() {
       return;
     }
 
-    if (!propertyId || !unitName) {
-      toast.error('Please select a property and a unit.');
-      return;
-    }
-
-    if (occupiedUnits.includes(unitName)) {
-      toast.error('This unit is already occupied.');
-      return;
-    }
+    setLoading(true);
 
     try {
       const selectedProperty = properties.find(p => p.id === propertyId);
-      await addDoc(collection(db, 'tenants'), {
+
+      const payload = {
         userId: user.uid,
         name,
-        email,
         phone,
+        dueDay,
         propertyId,
         unitName,
         propertyName: selectedProperty?.name || ''
-      });
+      };
+
+      // Validate with Zod
+      tenantSchema.parse(payload);
+
+      if (occupiedUnits.includes(unitName)) {
+        toast.error('This unit is already occupied.');
+        setLoading(false);
+        return;
+      }
+
+      await addDoc(collection(db, 'tenants'), payload);
 
       toast.success(`Tenant ${name} added to ${selectedProperty?.name} successfully!`);
       router.push('/tenants');
     } catch (error) {
-      console.error("Error adding tenant: ", error);
-      toast.error('Failed to add tenant. Please try again.');
+      if (error instanceof ZodError) {
+        toast.error(error.issues[0].message);
+      } else {
+        console.error("Error adding tenant: ", error);
+        toast.error('Failed to add tenant. Please try again.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -132,12 +147,43 @@ export default function AddTenantPage() {
               <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
             </div>
             <div className="space-y-2">
-              <label htmlFor="email">Email Address</label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <label htmlFor="phone">Phone Number (10 digits)</label>
+              <Input
+                id="phone"
+                value={phone}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                  setPhone(val);
+                }}
+                maxLength={10}
+                required
+                placeholder="0700000000"
+              />
             </div>
-            <div className="space-y-2">
-              <label htmlFor="phone">Phone Number</label>
-              <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+
+            <div className="space-y-4">
+              <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Monthly Rent Due Day
+              </label>
+              <ToggleGroup
+                type="single"
+                value={String(dueDay)}
+                onValueChange={(val) => {
+                  if (val) setDueDay(Number(val));
+                }}
+                className="grid grid-cols-4 sm:grid-cols-7 gap-2"
+              >
+                {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                  <ToggleGroupItem
+                    key={day}
+                    value={String(day)}
+                    className="h-10 w-10 rounded-full border border-input data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-accent hover:text-accent-foreground"
+                    aria-label={`Day ${day}`}
+                  >
+                    {day}
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
             </div>
 
             <div className="space-y-2">
@@ -173,7 +219,9 @@ export default function AddTenantPage() {
             )}
 
             <div className="flex justify-end pt-4">
-              <Button type="submit">Add Tenant</Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? 'Adding...' : 'Add Tenant'}
+              </Button>
             </div>
           </form>
         </CardContent>

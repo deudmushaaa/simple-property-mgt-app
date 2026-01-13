@@ -4,6 +4,7 @@ export interface Property {
   id: string;
   name: string;
   address: string;
+  units?: string[];
 }
 
 export interface Unit {
@@ -15,8 +16,9 @@ export interface Unit {
 export interface Tenant {
   id: string;
   name: string;
-  email: string;
+  email?: string;
   phone?: string;
+  dueDay?: number;
   propertyId?: string;
   unitId?: string;
   propertyName?: string;
@@ -24,7 +26,7 @@ export interface Tenant {
 }
 
 export interface Payment {
-  id:string;
+  id: string;
   userId: string;
   tenantId: string;
   propertyId: string;

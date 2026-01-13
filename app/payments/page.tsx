@@ -27,48 +27,57 @@ export default function PaymentsPage() {
 
   useEffect(() => {
     if (user) {
-        const fetchPayments = async () => {
-            try {
-              const paymentsQuery = query(collection(db, 'payments'), where('userId', '==', user.uid));
-              const tenantsQuery = query(collection(db, 'tenants'), where('userId', '==', user.uid));
-              const propertiesQuery = query(collection(db, 'properties'), where('userId', '==', user.uid));
+      const fetchPayments = async () => {
+        try {
+          const paymentsQuery = query(collection(db, 'payments'), where('userId', '==', user.uid));
+          const tenantsQuery = query(collection(db, 'tenants'), where('userId', '==', user.uid));
+          const propertiesQuery = query(collection(db, 'properties'), where('userId', '==', user.uid));
 
-              const [paymentsSnapshot, tenantsSnapshot, propertiesSnapshot] = await Promise.all([
-                getDocs(paymentsQuery),
-                getDocs(tenantsQuery),
-                getDocs(propertiesQuery),
-              ]);
+          const [paymentsSnapshot, tenantsSnapshot, propertiesSnapshot] = await Promise.all([
+            getDocs(paymentsQuery),
+            getDocs(tenantsQuery),
+            getDocs(propertiesQuery),
+          ]);
 
-              const tenantsData = tenantsSnapshot.docs.reduce((acc, doc) => {
-                acc[doc.id] = doc.data() as Tenant;
-                return acc;
-              }, {} as { [key: string]: Tenant });
+          const tenantsData = tenantsSnapshot.docs.reduce((acc, doc) => {
+            acc[doc.id] = doc.data() as Tenant;
+            return acc;
+          }, {} as { [key: string]: Tenant });
 
-              const propertiesData = propertiesSnapshot.docs.reduce((acc, doc) => {
-                acc[doc.id] = doc.data() as Property;
-                return acc;
-              }, {} as { [key: string]: Property });
+          const propertiesData = propertiesSnapshot.docs.reduce((acc, doc) => {
+            acc[doc.id] = doc.data() as Property;
+            return acc;
+          }, {} as { [key: string]: Property });
 
-              const paymentsData = paymentsSnapshot.docs.map((paymentDoc) => {
-                const data = paymentDoc.data();
-                const tenant = tenantsData[data.tenantId];
-                const property = propertiesData[data.propertyId];
-                
-                return { 
-                  ...data, 
-                  id: paymentDoc.id,
-                  tenantName: tenant?.name || 'N/A', 
-                  propertyName: property?.name || 'N/A',
-                  date: data.date instanceof Timestamp ? data.date.toDate() : new Date(data.date)
-                } as Payment;
-              });
-          
-              setPayments(paymentsData);
-            } catch (error) {
-              console.error("Permission Error during fetch:", error);
-              toast.error("Could not load payments. Check your permissions.");
-            }
-          };
+          const paymentsData = paymentsSnapshot.docs.map((paymentDoc) => {
+            const data = paymentDoc.data();
+            const tenant = tenantsData[data.tenantId];
+            const property = propertiesData[data.propertyId];
+
+            return {
+              id: paymentDoc.id,
+              userId: data.userId || '',
+              tenantId: data.tenantId || '',
+              propertyId: data.propertyId || '',
+              unitId: data.unitId || '',
+              amount: data.amount || 0,
+              type: data.type || 'rent',
+              date: data.date instanceof Timestamp ? data.date : Timestamp.now(),
+              tenantName: tenant?.name || 'N/A',
+              propertyName: property?.name || 'N/A',
+              months: data.months || [],
+              receiptNumber: data.receiptNumber,
+              unitName: data.unitName,
+              balanceAfterPayment: data.balanceAfterPayment
+            } as Payment;
+          });
+
+          setPayments(paymentsData);
+        } catch (error) {
+          console.error("Permission Error during fetch:", error);
+          toast.error("Could not load payments. Check your permissions.");
+        }
+      };
       fetchPayments();
     }
   }, [user]);
@@ -104,18 +113,25 @@ export default function PaymentsPage() {
   return (
     <div className="container mx-auto py-10">
       <div className="flex flex-col gap-4 mb-6">
-          <div className="flex justify-between items-center">
-              <h1 className="text-3xl font-bold">Payments</h1>
-              <Link href="/payments/add">
-                <Button>Record Payment</Button>
-              </Link>
-          </div>
-          <Input
-              placeholder="Search by tenant or property..."
-              value={searchTerm}
-              onChange={(e: FormEvent<HTMLInputElement>) => setSearchTerm(e.currentTarget.value)}
-              className="w-full"
-            />
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold">Payments</h1>
+          <Link href="/payments/add">
+            <Button>Record Payment</Button>
+          </Link>
+        </div>
+        <Input
+          placeholder="Search by tenant or property..."
+          value={searchTerm}
+          onChange={(e: FormEvent<HTMLInputElement>) => setSearchTerm(e.currentTarget.value)}
+          className="w-full"
+        />
+        <div className="flex justify-end">
+          <Link href="/payments/reports">
+            <Button variant="secondary">
+              Generate/View Report
+            </Button>
+          </Link>
+        </div>
       </div>
       <div className="rounded-md border">
         <Table>
@@ -132,40 +148,40 @@ export default function PaymentsPage() {
           <TableBody>
             {filteredPayments.map(payment => (
               <TableRow key={payment.id}>
-                <TableCell>{toDate(payment.date).toLocaleDateString()}</TableCell>
+                <TableCell>{payment.date.toDate ? payment.date.toDate().toLocaleDateString() : new Date(payment.date as any).toLocaleDateString()}</TableCell>
                 <TableCell>{payment.tenantName}</TableCell>
                 <TableCell>{payment.propertyName}</TableCell>
                 <TableCell>UGX {payment.amount.toLocaleString()}</TableCell>
                 <TableCell>{payment.type}</TableCell>
                 <TableCell className="text-right">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Open menu</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem asChild>
-                                <Link href={`/receipts/${payment.id}`}>
-                                    <Eye className="mr-2 h-4 w-4" />
-                                    View Receipt
-                                </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem asChild>
-                                <Link href={`/payments/edit/${payment.id}`}>
-                                    <Pencil className="mr-2 h-4 w-4" />
-                                    Edit
-                                </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDelete(payment.id)} className="text-red-600">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-8 w-8 p-0">
+                        <span className="sr-only">Open menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuItem asChild>
+                        <Link href={`/receipts/${payment.id}`}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Receipt
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link href={`/payments/edit/${payment.id}`}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Edit
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDelete(payment.id)} className="text-red-600">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
               </TableRow>
             ))}

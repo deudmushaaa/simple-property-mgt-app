@@ -2,12 +2,8 @@ import withPWA from 'next-pwa';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  // Ensure build-time safety
+  serverExternalPackages: ['@react-pdf/renderer'],
 };
 
 export default withPWA({

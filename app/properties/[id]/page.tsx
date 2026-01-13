@@ -21,21 +21,21 @@ interface Property extends DocumentData {
 }
 
 interface Tenant extends DocumentData {
-    id: string;
-    name: string;
-    unitId: string;
+  id: string;
+  name: string;
+  unitId: string;
 }
 
 interface UnitWithTenant {
-    id: string;
-    name: string;
-    tenant: Tenant | null;
+  id: string;
+  name: string;
+  tenant: Tenant | null;
 }
 
 export default function PropertyDetailPage() {
   const { user } = useAuth();
   const params = useParams();
-  const id = Array.isArray(params.id) ? params.id[0] : params.id;
+  const id = params?.id ? (Array.isArray(params.id) ? params.id[0] : params.id) : null;
   const [property, setProperty] = useState<Property | null>(null);
   const [unitsWithTenants, setUnitsWithTenants] = useState<UnitWithTenant[]>([]);
 
@@ -53,7 +53,7 @@ export default function PropertyDetailPage() {
           // Fetch tenants for this property
           const tenantsQuery = query(collection(db, 'tenants'), where('propertyId', '==', id));
           const tenantsSnapshot = await getDocs(tenantsQuery);
-          const tenantsMap = new Map(tenantsSnapshot.docs.map(doc => [doc.data().unitId, {id: doc.id, ...doc.data()} as Tenant]));
+          const tenantsMap = new Map(tenantsSnapshot.docs.map(doc => [doc.data().unitId, { id: doc.id, ...doc.data() } as Tenant]));
 
           // Map units to tenants
           const units = propertyData.units || [];
@@ -85,7 +85,7 @@ export default function PropertyDetailPage() {
         </CardHeader>
         <CardContent>
           <Separator className="my-6" />
-          
+
           <h3 className="text-2xl font-semibold mb-4">Units</h3>
           <div className="rounded-md border">
             <Table>
@@ -116,7 +116,7 @@ export default function PropertyDetailPage() {
                         </Link>
                       ) : (
                         <Link href={`/tenants/add?propertyId=${id}&unitId=${unit.id || unit.name}&unitName=${unit.name}&propertyName=${property.name}`}>
-                           <Button size="sm">Add Tenant</Button>
+                          <Button size="sm">Add Tenant</Button>
                         </Link>
                       )}
                     </TableCell>
